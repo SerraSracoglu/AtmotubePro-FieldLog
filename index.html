@@ -124,14 +124,20 @@
 
   <header>
     <h1>Saha Günlüğü</h1>
-    <div class="clock" id="clock">--:--:--</div>
+    <div class="clock" id="clock">--:--:-- · --.--.----</div>
   </header>
   <p class="sub">GTÜ Güney Kampüs — gerçek bina sınırlarına dokunun.</p>
 
   <div class="id-row">
-    <label for="pid">Katılımcı</label>
-    <input id="pid" type="text" placeholder="ör. P07" autocomplete="off">
-    <span class="id-status" id="idStatus"></span>
+    <label for="pname">Ad Soyad</label>
+    <input id="pname" type="text" placeholder="Ad Soyad" autocomplete="off">
+    <span class="id-status" id="nameStatus"></span>
+  </div>
+
+  <div class="id-row">
+    <label for="firstTime">İlk Ölçüm Saati</label>
+    <input id="firstTime" type="time" step="1">
+    <span class="id-status" id="firstTimeStatus"></span>
   </div>
 
   <div class="section-label">Son Kullanılanlar</div>
@@ -242,19 +248,30 @@ const ROADS_GEOJSON = {"type":"FeatureCollection","features":[{"type":"Feature",
 
 /* ====================================================================== */
 
+/* ======================================================================
+   SUNUCU ADRESİ — her tunnel yeniden başlatıldığında burayı güncelleyin
+   (cloudflared/ngrok yeni bir URL verdiğinde). Boş bırakırsanız (''),
+   veriler sadece telefonda yerel olarak saklanır, sunucuya gönderilmez.
+   Örnek: 'https://kelime-kelime-1234.trycloudflare.com'
+   ====================================================================== */
+const SERVER_URL = 'https://depend-hope-pets-vaccine.trycloudflare.com';
+/* ====================================================================== */
+
 const STORE_KEY = 'saha-gunlugu:kayitlar';
 const PROFILE_KEY = 'saha-gunlugu:profil';
 const RECENT_MAX = 6;
 
 let entries = [];
-let participantId = '';
+let participantName = '';
+let firstMeasurementTime = '';
 let recentEntries = [];
 let activeRoomBuilding = null;
 
 function pad(n){ return n.toString().padStart(2,'0'); }
 function fmtTime(d){ return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }
 function fmtDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
-function tickClock(){ document.getElementById('clock').textContent = fmtTime(new Date()); }
+function tickClock(){ document.getElementById('clock').textContent = fmtTime(new Date()) + ' · ' + fmtDateTr(new Date()); }
+function fmtDateTr(d){ return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear(); }
 setInterval(tickClock, 1000); tickClock();
 
 function showToast(msg){
@@ -421,6 +438,29 @@ async function logEntry(num, label, room, color){
   renderRecent(); renderLog();
   showToast(label + (room? ' — '+room:'') + ' — ' + fmtTime(now));
   if(navigator.vibrate) navigator.vibrate(15);
+  sendToServer({ num, label, room: room||'', ts: now.getTime() });
+}
+
+// Sunucuya gönderme — arka planda, sessizce dener. Başarısız olsa bile
+// kayıt zaten yukarıda telefonda (localStorage) saklandı, veri kaybolmaz.
+function sendToServer(entry){
+  if(!SERVER_URL) return;
+  fetch(SERVER_URL.replace(/\/$/,'') + '/log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      participant_name: participantName,
+      first_measurement_time: firstMeasurementTime,
+      ts: entry.ts,
+      num: entry.num,
+      label: entry.label,
+      room: entry.room
+    })
+  }).then(res=>{
+    if(!res.ok) throw new Error('sunucu hatası');
+  }).catch(()=>{
+    showToast('⚠️ Sunucuya ulaşılamadı, kayıt telefonda saklı');
+  });
 }
 function renderRecent(){
   const row = document.getElementById('recentRow');
@@ -442,16 +482,21 @@ async function loadData(){
   try{ entries = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }catch(e){ entries=[]; }
   try{
     const prof = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
-    participantId = prof.participantId || '';
+    participantName = prof.participantName || '';
+    firstMeasurementTime = prof.firstMeasurementTime || '';
     recentEntries = prof.recentEntries || [];
-  }catch(e){ participantId=''; recentEntries=[]; }
-  document.getElementById('pid').value = participantId;
+  }catch(e){ participantName=''; firstMeasurementTime=''; recentEntries=[]; }
+  document.getElementById('pname').value = participantName;
+  document.getElementById('firstTime').value = firstMeasurementTime;
   updateIdStatus();
   renderRecent(); renderLog();
 }
 async function saveEntries(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(entries)); }catch(e){ showToast('Kaydetme hatası'); } }
-async function saveProfile(){ try{ localStorage.setItem(PROFILE_KEY, JSON.stringify({participantId, recentEntries})); }catch(e){} }
-function updateIdStatus(){ document.getElementById('idStatus').textContent = participantId ? '✓ kayıtlı' : ''; }
+async function saveProfile(){ try{ localStorage.setItem(PROFILE_KEY, JSON.stringify({participantName, firstMeasurementTime, recentEntries})); }catch(e){} }
+function updateIdStatus(){
+  document.getElementById('nameStatus').textContent = participantName ? '✓' : '';
+  document.getElementById('firstTimeStatus').textContent = firstMeasurementTime ? '✓' : '';
+}
 
 /* ---------- Kayıt günlüğü ---------- */
 function renderLog(){
@@ -477,8 +522,11 @@ function renderLog(){
   });
 }
 
-document.getElementById('pid').addEventListener('input', async (ev)=>{
-  participantId = ev.target.value.trim(); updateIdStatus(); await saveProfile();
+document.getElementById('pname').addEventListener('input', async (ev)=>{
+  participantName = ev.target.value.trim(); updateIdStatus(); await saveProfile();
+});
+document.getElementById('firstTime').addEventListener('input', async (ev)=>{
+  firstMeasurementTime = ev.target.value; updateIdStatus(); await saveProfile();
 });
 document.getElementById('undoBtn').addEventListener('click', async ()=>{
   if(entries.length===0){ showToast('Silinecek kayıt yok'); return; }
@@ -488,16 +536,16 @@ document.getElementById('undoBtn').addEventListener('click', async ()=>{
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   if(entries.length===0){ showToast('Aktarılacak kayıt yok'); return; }
   const sorted = [...entries].sort((a,b)=>a.ts-b.ts);
-  const rows = [['katilimci_id','tarih','saat','unix_ts_ms','bina_no','bina_adi','oda']];
+  const rows = [['ad_soyad','ilk_olcum_saati','tarih','saat','unix_ts_ms','bina_no','bina_adi','oda']];
   sorted.forEach(e=>{
     const d = new Date(e.ts);
-    rows.push([participantId||'bilinmiyor', fmtDate(d), fmtTime(d), e.ts, e.num, e.label, e.room||'']);
+    rows.push([participantName||'bilinmiyor', firstMeasurementTime||'', fmtDate(d), fmtTime(d), e.ts, e.num, e.label, e.room||'']);
   });
   const csv = rows.map(r=> r.map(c=> `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `saha-gunlugu_${participantId||'katilimci'}_${fmtDate(new Date()).replace(/-/g,'')}.csv`;
+  a.href = url; a.download = `saha-gunlugu_${(participantName||'katilimci').replace(/\s+/g,'_')}_${fmtDate(new Date()).replace(/-/g,'')}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   showToast('CSV indirildi');
 });

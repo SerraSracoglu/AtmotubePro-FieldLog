@@ -3,33 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Saha Günlüğü — GTÜ Kampüs (Gerçek Harita)</title>
+<title>Saha Günlüğü — GTÜ Kampüs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root{
-    --ink:#1c2430;
-    --panel:#ffffff;
-    --line: rgba(28,36,48,0.12);
-    --muted:#6b7580;
-    --bg:#f3f5f2;
+    --ink:#1c2430; --panel:#ffffff; --line: rgba(28,36,48,0.12);
+    --muted:#6b7580; --bg:#f3f5f2;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:transparent;}
   body{ font-family:'Space Grotesk', system-ui, sans-serif; color:var(--ink); -webkit-tap-highlight-color: transparent; }
   .app{ max-width:520px; margin:0 auto; padding:18px 16px 40px; }
-
   .strip{ display:flex; gap:3px; height:6px; margin-bottom:14px; border-radius:3px; overflow:hidden; }
   .strip span{flex:1; background:var(--line);}
   .strip span.on{background:linear-gradient(90deg,#2f7dc4,#7d5bc2,#d98a2b,#3fa142,#5a6472);}
-
   header{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
   h1{ font-size:18px; font-weight:700; letter-spacing:-0.01em; margin:0; }
   .clock{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--muted); }
   .sub{ font-size:12px; color:var(--muted); margin:2px 0 14px; }
-
   .id-row{
     display:flex; gap:8px; align-items:center;
     background:var(--panel); border:1px solid var(--line); border-radius:12px;
@@ -37,11 +31,39 @@
   }
   .id-row label{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); white-space:nowrap; }
   .id-row input{ flex:1; border:none; outline:none; background:transparent; font-family:'JetBrains Mono', monospace; font-size:14px; color:var(--ink); min-width:0; }
+  .manual-row{ display:flex; gap:8px; margin-top:2px; }
+  .manual-row input{
+    flex:1; border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-family:'Space Grotesk', sans-serif; font-size:13px; outline:none; color:var(--ink);
+  }
+  .manual-row button{
+    border:none; border-radius:10px; padding:10px 14px; background:var(--ink); color:#fff;
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .nav-btn.ghost{ background:var(--panel)!important; color:var(--ink)!important; border:1.5px dashed var(--line); }
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(28,36,48,0.45); z-index:1300;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-box{
+    background:var(--panel); border-radius:16px; padding:18px; width:100%; max-width:360px;
+  }
+  .modal-box h3{ margin:0 0 10px; font-size:14.5px; font-weight:700; font-family:'Space Grotesk',sans-serif; }
+  .modal-box textarea{
+    width:100%; min-height:70px; border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-family:'Space Grotesk', sans-serif; font-size:13.5px; outline:none; color:var(--ink); resize:vertical;
+    box-sizing:border-box;
+  }
+  .modal-actions{ display:flex; gap:8px; margin-top:12px; }
+  .modal-actions button{
+    flex:1; border:none; border-radius:10px; padding:11px; font-family:'Space Grotesk', sans-serif;
+    font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .modal-actions .cancel{ background:var(--bg); color:var(--ink); border:1px solid var(--line); }
+  .modal-actions .save{ background:var(--ink); color:#fff; }
   .id-status{ font-size:11px; color:#1f9e8b; font-family:'JetBrains Mono', monospace; }
-
   .section-label{ font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:14px 2px 8px; font-weight:600; }
   .section-label:first-of-type{margin-top:0;}
-
   .recent-row{ display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; margin-bottom:4px; -webkit-overflow-scrolling:touch; }
   .recent-row::-webkit-scrollbar{display:none;}
   .recent-chip{
@@ -50,40 +72,53 @@
   }
   .recent-chip:active{transform:scale(0.95);}
   .recent-empty{ font-size:12px; color:var(--muted); padding:6px 2px; }
-
-  #map{
-    width:100%;
-    height:400px;
-    border-radius:14px;
-    border:1px solid var(--line);
-    margin-bottom:10px;
-    background:#dfe3de;
-  }
+  #map{ width:100%; height:400px; border-radius:14px; border:1px solid var(--line); margin-bottom:10px; background:#dfe3de; }
   .leaflet-container{ font-family:'Space Grotesk', sans-serif; }
   .bld-label{
     background:none; border:none; box-shadow:none;
     font-size:9.5px; font-weight:700; color:#1c2430;
-    text-shadow:0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
-    white-space:nowrap;
+    text-shadow:0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
+    white-space:normal; text-align:center; line-height:1.15;
+    display:flex; align-items:center; justify-content:center;
   }
-  .map-legend{
-    display:flex; flex-wrap:wrap; gap:7px 12px; margin:0 2px 10px;
+  .zone-label{
+    background:none; border:none; box-shadow:none;
+    font-size:13px; font-weight:700; color:#1c2430;
+    text-shadow:0 0 4px #fff, 0 0 4px #fff, 0 0 4px #fff, 0 0 4px #fff;
+    white-space:nowrap; text-align:center;
   }
+  .entrance-marker{ display:flex; flex-direction:column; align-items:center; pointer-events:none; }
+  .entrance-text{
+    font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:11px; letter-spacing:0.03em;
+    color:#1f9e8b; text-shadow:0 0 4px #fff, 0 0 4px #fff, 0 0 4px #fff, 0 0 4px #fff;
+    white-space:nowrap; margin-bottom:-3px;
+  }
+  .entrance-arrow{ font-size:26px; line-height:1; color:#1f9e8b; text-shadow:0 0 4px #fff, 0 0 4px #fff, 0 0 4px #fff; }
+  .map-legend{ display:flex; flex-wrap:wrap; gap:7px 12px; margin:0 2px 10px; }
   .map-legend span{ font-size:10.5px; color:var(--muted); display:flex; align-items:center; gap:5px; }
   .map-legend i{ width:9px;height:9px;border-radius:2px; display:inline-block; }
-
+  .breadcrumb{ display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+  .crumb-back{
+    display:flex; align-items:center; gap:5px;
+    background:var(--panel); border:1px solid var(--line); border-radius:20px;
+    padding:6px 12px 6px 9px; font-size:12.5px; font-weight:600; color:var(--ink);
+    cursor:pointer; font-family:'Space Grotesk', sans-serif;
+  }
+  .crumb-back:active{transform:scale(0.96);}
+  .crumb-path{ font-size:11.5px; color:var(--muted); font-family:'JetBrains Mono', monospace; }
   .log-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
   .count{ font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--muted); }
   .log{ background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
-  .log-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--line); font-family:'JetBrains Mono', monospace; font-size:12.5px; }
+  .log-row{ display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-bottom:1px solid var(--line); font-family:'JetBrains Mono', monospace; font-size:12.5px; }
   .log-row:last-child{border-bottom:none;}
   .dot{ width:9px;height:9px;border-radius:50%; flex-shrink:0; }
   .log-time{ color:var(--muted); min-width:64px; }
-  .log-cat{ flex:1; color:var(--ink); font-family:'Space Grotesk',sans-serif; font-weight:500; font-size:13px; }
+  .log-cat{ flex:1; color:var(--ink); font-family:'Space Grotesk',sans-serif; font-weight:500; font-size:13px; min-width:0; }
+  .log-note{ display:block; color:var(--muted); font-family:'Space Grotesk',sans-serif; font-weight:400; font-size:11.5px; margin-top:2px; white-space:normal; word-break:break-word; }
+  .log-note-btn{ background:none; border:none; font-size:14px; cursor:pointer; padding:4px 6px; flex-shrink:0; }
   .log-del{ background:none;border:none;color:var(--muted); font-family:'JetBrains Mono', monospace; font-size:14px; cursor:pointer; padding:4px 6px; }
   .log-del:hover{color:#c0392b;}
   .empty{ padding:26px 14px; text-align:center; color:var(--muted); font-size:13px; }
-
   .actions{ display:flex; gap:8px; margin-top:14px; }
   .actions button{
     flex:1; border:1px solid var(--line); background:var(--panel); color:var(--ink);
@@ -91,7 +126,6 @@
   }
   .actions button:active{transform:scale(0.98);}
   .actions button.primary{ background:var(--ink); color:#fff; border-color:var(--ink); }
-
   .toast{
     position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(10px);
     background:var(--ink); color:#fff; padding:9px 16px; border-radius:20px;
@@ -100,7 +134,6 @@
     max-width:88%; text-align:center; z-index:1200;
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
-
   .box-grid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:10px; }
   .nav-btn{
     position:relative; border:none; border-radius:14px; padding:16px 12px 14px;
@@ -108,13 +141,6 @@
     font-size:14px; cursor:pointer; min-height:56px; -webkit-user-select:none; user-select:none;
   }
   .nav-btn:active{transform:scale(0.96);}
-  .breadcrumb{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-  .crumb-back{
-    display:flex; align-items:center; gap:5px;
-    background:var(--panel); border:1px solid var(--line); border-radius:20px;
-    padding:6px 12px 6px 9px; font-size:12.5px; font-weight:600; color:var(--ink);
-    cursor:pointer; font-family:'Space Grotesk', sans-serif;
-  }
 </style>
 </head>
 <body>
@@ -126,7 +152,7 @@
     <h1>Saha Günlüğü</h1>
     <div class="clock" id="clock">--:--:-- · --.--.----</div>
   </header>
-  <p class="sub">GTÜ Güney Kampüs — gerçek bina sınırlarına dokunun.</p>
+  <p class="sub">GTÜ Kampüsü — bölge seçin, sonra bina/yol/alanlara dokunun.</p>
 
   <div class="id-row">
     <label for="pname">Ad Soyad</label>
@@ -146,15 +172,7 @@
   <div class="section-label">Harita</div>
   <div class="breadcrumb" id="mapBreadcrumb"></div>
   <div id="map"></div>
-  <div class="map-legend">
-    <span><i style="background:#2f7dc4"></i>Akademik Bölüm</span>
-    <span><i style="background:#7d5bc2"></i>Enstitü</span>
-    <span><i style="background:#d98a2b"></i>Sosyal/Yaşam</span>
-    <span><i style="background:#5a6472"></i>İdari</span>
-    <span><i style="background:#c0392b"></i>Sağlık/Diğer</span>
-    <span><i style="background:#8fbf7f"></i>Yeşil Alan</span>
-    <span><i style="background:#c9ccd1"></i>Yol</span>
-  </div>
+  <div class="map-legend" id="mapLegend"></div>
 
   <div id="roomArea"></div>
 
@@ -172,10 +190,46 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="modalRoot"></div>
 
 <script>
 /* ======================================================================
-   BİNA VERİSİ (isim, renk, varsa odalar) — harita numarasına göre
+   VERİYİ KENDİN GÜNCELLEMEK İSTERSEN (Claude'a tekrar göndermeden):
+
+   1) QGIS'te ilgili katmanı (örn. GTU-SouthEastBuilding) düzenle, kaydet.
+   2) Katmana sağ tık → Dışa Aktar (Export) → Farklı Kaydet (Save Features As...)
+      - Format: GeoJSON
+      - CRS: EPSG:4326 - WGS 84  (shapefile'lar zaten bu projeksiyonda)
+      - Alanlar: "id" ve "name" sütunlarının bulunduğundan emin ol
+   3) Oluşan .geojson dosyasını bir metin editöründe (Not Defteri, VSCode vb.) aç,
+      TÜM içeriğini kopyala.
+   4) Bu HTML dosyasını bir metin editöründe aç, aşağıdaki const'lardan
+      hangi katmanı güncellediysen onu bul:
+        - Binalar   → const SE_BUILDINGS = ... ;
+        - Bahçeler  → const SE_GARDENS   = ... ;
+        - Otoparklar→ const SE_PARKING   = ... ;
+        - Yollar    → const SE_ROADS     = ... ;
+        - Orman     → const SE_FOREST    = ... ;
+      "=" işaretinden sonraki { ... } bloğunu (satır sonundaki ; hariç)
+      kopyaladığın yeni GeoJSON ile DEĞİŞTİR. Yapı ve alan isimleri
+      ("id", "name") birebir aynı olduğu için başka hiçbir şeyi
+      değiştirmene gerek yok.
+   5) Dosyayı kaydet, tarayıcıda sayfayı yenile (F5) — değişiklik hemen görünür.
+
+   NOT: Bina renk/etiket bilgisi (SE_BUILDING_INFO) ve oda/kat verisi
+   (ROOM_DATA) ayrı, küçük objelerdir — id numarası üzerinden eşleşirler.
+   Yeni bir bina eklediysen (yeni id), SE_BUILDING_INFO'ya da o id için
+   { label:"...", color:"#......" } satırı eklemen gerekir, yoksa gri
+   ve "Bina (adsız)" olarak görünür.
+   ====================================================================== */
+/* ======================================================================
+   SUNUCU ADRESİ — tunnel her yeniden başlatıldığında güncelleyin
+   ====================================================================== */
+const SERVER_URL = 'https://post-covers-geek-tour.trycloudflare.com';
+/* ====================================================================== */
+
+/* ======================================================================
+   BİNA VERİSİ (isim, renk, varsa odalar) — legend numarasına göre
    ====================================================================== */
 const BUILDINGS = {
   1: { label:"Ana Giriş", color:"#1f9e8b",  },
@@ -241,20 +295,76 @@ const BUILDINGS = {
   64: { label:"Kongre ve Kültür Merkezi", color:"#d98a2b",  }
 };
 
-const SOUTH_BOUNDARY_GEOJSON = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"zone":"guney","label":"Güney Kampüs"},"geometry":{"type":"Polygon","coordinates":[[[29.3538826,40.8061538],[29.3556289,40.804222],[29.3558207,40.8041877],[29.3601809,40.8035202],[29.3615787,40.8039327],[29.361699,40.803971],[29.3643665,40.8050144],[29.3647738,40.8066605],[29.36337186443041,40.80702204476551],[29.3549808,40.8089022],[29.3548584,40.8089262],[29.3547025,40.8085632],[29.3546161,40.8083371],[29.3545767,40.8082237],[29.354351,40.8075653],[29.3540172,40.8065703],[29.3539895,40.8064857],[29.3538826,40.8061538]]]}}]};
-const BUILDINGS_GEOJSON = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"num":49,"osm_name":"Bilgisayar Mühendisliği"},"geometry":{"type":"Polygon","coordinates":[[[29.3558157,40.8078896],[29.3559533,40.8082812],[29.3561919,40.8082332],[29.3561955,40.8082438],[29.3562376,40.8082357],[29.3562339,40.8082248],[29.3564715,40.8081769],[29.3563347,40.8077875],[29.3560905,40.8078367],[29.3560849,40.8078212],[29.3560439,40.8078297],[29.3560486,40.8078427],[29.3558157,40.8078896]],[[29.3560138,40.8080394],[29.3560033,40.8080093],[29.3560767,40.807996],[29.3560797,40.8080053],[29.356179,40.8079873],[29.3561753,40.8079756],[29.3562439,40.8079632],[29.3562521,40.8079889],[29.3562248,40.8079939],[29.356238,40.8080351],[29.3562637,40.8080304],[29.3562728,40.8080589],[29.3562151,40.8080694],[29.3562119,40.8080594],[29.3560971,40.8080803],[29.3561008,40.808092],[29.3560378,40.8081034],[29.3560303,40.8080816],[29.3560557,40.8080765],[29.3560409,40.808034],[29.3560138,40.8080394]]]}},{"type":"Feature","properties":{"num":45,"osm_name":"Kimya Mühendisliği"},"geometry":{"type":"Polygon","coordinates":[[[29.358679,40.8059266],[29.3588045,40.8059016],[29.358784,40.8058425],[29.3588553,40.8058283],[29.3588223,40.8057334],[29.3588805,40.8057218],[29.3588645,40.8056759],[29.3589911,40.8056507],[29.3589578,40.805555],[29.3588208,40.8055823],[29.3588031,40.8055313],[29.3587587,40.8055401],[29.3587294,40.8054559],[29.3585294,40.8054957],[29.358679,40.8059266]]]}},{"type":"Feature","properties":{"num":48,"osm_name":"Elektronik Mühendisliği, İnşaat Mühendisliği"},"geometry":{"type":"Polygon","coordinates":[[[29.3553126,40.8063579],[29.3555539,40.8070525],[29.3560997,40.80693],[29.3558762,40.8062453],[29.3553126,40.8063579]]]}},{"type":"Feature","properties":{"num":46,"osm_name":"Kütüphane"},"geometry":{"type":"Polygon","coordinates":[[[29.3583715,40.8066044],[29.358428,40.8067683],[29.3588006,40.8066947],[29.3588078,40.8067158],[29.3591132,40.8066554],[29.3590315,40.8064187],[29.3589897,40.8064269],[29.3588999,40.8061666],[29.3586832,40.8062093],[29.3587781,40.8064849],[29.358734,40.8064935],[29.3587466,40.8065303],[29.3583715,40.8066044]]]}},{"type":"Feature","properties":{"num":34,"osm_name":"Harita ve Endüstri Mühendisliği Bölümü"},"geometry":{"type":"Polygon","coordinates":[[[29.3619523,40.8070365],[29.3622447,40.8069832],[29.3620858,40.8064744],[29.3617927,40.8065253],[29.3619523,40.8070365]]]}},{"type":"Feature","properties":{"num":33,"osm_name":"Biyomühendislik Bölümü"},"geometry":{"type":"Polygon","coordinates":[[[29.362576,40.8070664],[29.363257,40.806938],[29.3632228,40.8068341],[29.3631844,40.8067173],[29.3625034,40.8068457],[29.362576,40.8070664]]]}},{"type":"Feature","properties":{"num":36,"osm_name":"Yer ve Deniz Bilimleri Enstitüsü"},"geometry":{"type":"Polygon","coordinates":[[[29.3619374,40.8050487],[29.36205,40.8050279],[29.3620074,40.8048956],[29.3620483,40.8048881],[29.3620405,40.8048638],[29.3622603,40.8048232],[29.362244,40.8047725],[29.362228,40.8047227],[29.3620134,40.8047623],[29.3620057,40.8047386],[29.3619619,40.8047467],[29.3619277,40.8046405],[29.3619189,40.8046132],[29.3618012,40.804635],[29.3618451,40.8047713],[29.361809,40.804778],[29.3618531,40.8049148],[29.3618919,40.8049077],[29.3619374,40.8050487]]]}},{"type":"Feature","properties":{"num":48,"osm_name":"İnşaat Mühendisliği Laboratuvarı"},"geometry":{"type":"Polygon","coordinates":[[[29.357196,40.8058726],[29.3573677,40.8058401],[29.3572819,40.8056188],[29.3571209,40.8056492],[29.357196,40.8058726]]]}},{"type":"Feature","properties":{"num":37,"osm_name":"Sumer Ek Binası"},"geometry":{"type":"Polygon","coordinates":[[[29.36084316695307,40.80628605281746],[29.361100109352495,40.806246332253295],[29.3610284,40.8059997],[29.3607731,40.8060488],[29.36084316695307,40.80628605281746]]]}},{"type":"Feature","properties":{"num":44,"osm_name":"Havacılık ve Uzay Bilimleri Fakültesi"},"geometry":{"type":"Polygon","coordinates":[[[29.3573065,40.8051952],[29.3576166,40.8061757],[29.3579912,40.8061073],[29.3576883,40.805126],[29.3573065,40.8051952]]]}},{"type":"Feature","properties":{"num":44,"osm_name":"Havacılık ve Uzay Bilimleri Fakültesi"},"geometry":{"type":"Polygon","coordinates":[[[29.3571672,40.8060267],[29.3566684,40.8061192],[29.3567193,40.8062763],[29.3572174,40.806183],[29.3571672,40.8060267]]]}},{"type":"Feature","properties":{"num":32,"osm_name":"KYK Nilüfer Hatun Kız Yurdu"},"geometry":{"type":"Polygon","coordinates":[[[29.3639824,40.8067734],[29.3647738,40.8066605],[29.3645968,40.8059495],[29.36435,40.8059847],[29.364482,40.8065151],[29.3639374,40.8065927],[29.3639824,40.8067734]]]}},{"type":"Feature","properties":{"num":32,"osm_name":"KYK Nilüfer Hatun Kız Yurdu"},"geometry":{"type":"Polygon","coordinates":[[[29.364294,40.8057469],[29.3645341,40.8057139],[29.3643665,40.8050144],[29.3635646,40.8051246],[29.3636071,40.805302],[29.364169,40.8052249],[29.364294,40.8057469]]]}},{"type":"Feature","properties":{"num":47,"osm_name":"Merkezi Amfi Binası"},"geometry":{"type":"Polygon","coordinates":[[[29.3590507,40.8077033],[29.3595541,40.8076272],[29.3593712,40.8069333],[29.3590869,40.8069762],[29.3591142,40.8070798],[29.3588732,40.8071162],[29.3589047,40.8072357],[29.3593509,40.8071684],[29.3593659,40.8072254],[29.3589282,40.8072914],[29.3589511,40.8073782],[29.3594014,40.8073104],[29.3594203,40.8073823],[29.3589603,40.8074517],[29.3589857,40.8075479],[29.3594339,40.8074802],[29.3594504,40.8075429],[29.3590253,40.8076071],[29.3590507,40.8077033]]]}},{"type":"Feature","properties":{"num":30,"osm_name":"BİM"},"geometry":{"type":"Polygon","coordinates":[[[29.359404,40.8059923],[29.3594773,40.8062371],[29.3597305,40.8061936],[29.3596573,40.8059488],[29.359404,40.8059923]]]}}]};
-const GARDENS_GEOJSON = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"gid":1},"geometry":{"type":"Polygon","coordinates":[[[29.363271644014084,40.80610682435992],[29.363044729863937,40.805271023906876],[29.362738395761237,40.8053126248344],[29.36300312893641,40.806152207189946],[29.363271644014084,40.80610682435992]]]}},{"type":"Feature","properties":{"gid":2},"geometry":{"type":"Polygon","coordinates":[[[29.36218434704462,40.80631104709505],[29.362339405047223,40.806277009972526],[29.362055762359535,40.80543742761698],[29.361904486259437,40.805460119032],[29.36218434704462,40.80631104709505]]]}},{"type":"Feature","properties":{"gid":3},"geometry":{"type":"Polygon","coordinates":[[[29.362006597627005,40.807256522720664],[29.362589010612385,40.8071619751581],[29.362483117342318,40.80682538583538],[29.362252421289668,40.80687833247042],[29.36228645841219,40.8069993533505],[29.361946087186965,40.807056081888035],[29.362006597627005,40.807256522720664]]]}},{"type":"Feature","properties":{"gid":4},"geometry":{"type":"Polygon","coordinates":[[[29.362316713632218,40.806617381197746],[29.362725159102485,40.80656065266021],[29.36266843056495,40.80643206797512],[29.36306931223021,40.80633752041256],[29.363144950280258,40.806481232707654],[29.36337186443041,40.80643584987763],[29.363281098770347,40.80617489860496],[29.362222166069657,40.80637533943759],[29.362316713632218,40.806617381197746]]]}},{"type":"Feature","properties":{"gid":5},"geometry":{"type":"Polygon","coordinates":[[[29.36261170202741,40.807158193255596],[29.36337186443041,40.80702204476551],[29.36350044911549,40.80680269442037],[29.36340590155293,40.80646610509765],[29.36230158602221,40.806693019247795],[29.362354532657243,40.80683294964039],[29.362524718269853,40.80680269442037],[29.363182769305283,40.806693019247795],[29.36326975306284,40.806938842910455],[29.362596574417402,40.80707499140055],[29.36261170202741,40.807158193255596]]]}},{"type":"Feature","properties":{"gid":6},"geometry":{"type":"Polygon","coordinates":[[[29.36190826816195,40.80541095429946],[29.36225998509468,40.805350443859425],[29.362002815724512,40.80457893574892],[29.36158302454674,40.804404968233804],[29.36190826816195,40.80541095429946]]]}},{"type":"Feature","properties":{"gid":7},"geometry":{"type":"Polygon","coordinates":[[[29.36082664404624,40.80652661553769],[29.362089799482067,40.80631482899756],[29.361840193916905,40.805460119032],[29.3606110756036,40.80570594269466],[29.360701841263662,40.80603496821237],[29.361102722928923,40.80596689396733],[29.361201052393987,40.8063829032426],[29.360955228731324,40.80642828607263],[29.360932537316312,40.80629213758254],[29.36078126121621,40.80630726519255],[29.36082664404624,40.80652661553769]]]}},{"type":"Feature","properties":{"gid":8},"geometry":{"type":"Polygon","coordinates":[[[29.359586180025428,40.80674974778535],[29.360728314581173,40.80655687075772],[29.360516528041035,40.805732416012184],[29.359661818075477,40.805876128307276],[29.359745019930532,40.80622784524],[29.359457595340345,40.80625810046002],[29.359586180025428,40.80674974778535]]]}},{"type":"Feature","properties":{"gid":9},"geometry":{"type":"Polygon","coordinates":[[[29.361976342406987,40.80726786842816],[29.361696481621802,40.806458541292635],[29.359797966565562,40.806795130615356],[29.361344764689072,40.807381325503236],[29.361976342406987,40.80726786842816]]]}},{"type":"Feature","properties":{"gid":10},"geometry":{"type":"Polygon","coordinates":[[[29.361197270491477,40.80742292643077],[29.35966938188048,40.806821603932875],[29.359605089537936,40.80682916773788],[29.359847131298096,40.807604457750884],[29.35993411505565,40.80764227677591],[29.361197270491477,40.80742292643077]]]}},{"type":"Feature","properties":{"gid":11},"geometry":{"type":"Polygon","coordinates":[[[29.36012699208328,40.80571728840217],[29.36176455586685,40.80541851810448],[29.361579242644225,40.804832323216594],[29.359953024568167,40.80516134873431],[29.36012699208328,40.80571728840217]]]}},{"type":"Feature","properties":{"gid":12},"geometry":{"type":"Polygon","coordinates":[[[29.359090750797602,40.80503654595175],[29.36014211969329,40.80482097750911],[29.360225321548345,40.80505923736676],[29.361556551229214,40.8048020679966],[29.361469567471655,40.80445035106386],[29.36069427745865,40.804174272181186],[29.360444671893486,40.80415536266867],[29.358897873769976,40.80443522345386],[29.359090750797602,40.80503654595175]]]}},{"type":"Feature","properties":{"gid":13},"geometry":{"type":"Polygon","coordinates":[[[29.362399915487252,40.8058912559173],[29.362698685784945,40.80582696357476],[29.362653302954914,40.80567190557216],[29.36233562314471,40.805709724597186],[29.362399915487252,40.8058912559173]]]}},{"type":"Feature","properties":{"gid":14},"geometry":{"type":"Polygon","coordinates":[[[29.363659289020585,40.8067951306154],[29.363939149805766,40.80677243920039],[29.363568523360524,40.80513865731932],[29.36317520550027,40.80520673156436],[29.363659289020585,40.8067951306154]]]}}]};
-const ROADS_GEOJSON = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"rid":1},"geometry":{"type":"Polygon","coordinates":[[[29.36353637718926,40.806844295347936],[29.363634706654324,40.80681782203042],[29.36312036791399,40.805187822051856],[29.36304472986394,40.805218077271874],[29.36353637718926,40.806844295347936]]]}},{"type":"Feature","properties":{"rid":2},"geometry":{"type":"Polygon","coordinates":[[[29.363362409674146,40.80708633710808],[29.363358627771643,40.80703717237555],[29.35984524034685,40.807687659605975],[29.35984524034685,40.807736824338505],[29.363362409674146,40.80708633710808]]]}},{"type":"Feature","properties":{"rid":3},"geometry":{"type":"Polygon","coordinates":[[[29.361305054712805,40.80739267121079],[29.35979607561432,40.806802694420405],[29.359663709026734,40.80682538583542],[29.36120672524774,40.80742292643081],[29.361305054712805,40.80739267121079]]]}},{"type":"Feature","properties":{"rid":4},"geometry":{"type":"Polygon","coordinates":[[[29.362197583703388,40.80636399373011],[29.36330189923411,40.806155989092474],[29.363286771624097,40.80611060626244],[29.36219001989838,40.80631482899758],[29.362197583703388,40.80636399373011]]]}},{"type":"Feature","properties":{"rid":5},"geometry":{"type":"Polygon","coordinates":[[[29.36212194565334,40.8063564299251],[29.36218623799588,40.8063413023151],[29.36189881340569,40.80539960859198],[29.36183073916065,40.80541473620199],[29.36212194565334,40.8063564299251]]]}},{"type":"Feature","properties":{"rid":6},"geometry":{"type":"Polygon","coordinates":[[[29.363097676498974,40.80518782205184],[29.36185343057566,40.805418518104496],[29.361876121990676,40.80546011903202],[29.363101458401477,40.805248332491885],[29.363097676498974,40.80518782205184]]]}},{"type":"Feature","properties":{"rid":7},"geometry":{"type":"Polygon","coordinates":[[[29.36189881340569,40.805392044786984],[29.361569787887976,40.80437471301382],[29.361501713642934,40.80440496823384],[29.361823175355642,40.80540717239699],[29.36189881340569,40.805392044786984]]]}},{"type":"Feature","properties":{"rid":8},"geometry":{"type":"Polygon","coordinates":[[[29.3596145442942,40.80683294964041],[29.36215598277586,40.80637155753511],[29.362137073263348,40.80631104709507],[29.359595634781687,40.806749747785354],[29.3596145442942,40.80683294964041]]]}},{"type":"Feature","properties":{"rid":9},"geometry":{"type":"Polygon","coordinates":[[[29.36230725887596,40.80686698676294],[29.362363987413495,40.806855641055435],[29.362212711313397,40.806363993730116],[29.362148418970854,40.806363993730116],[29.36230725887596,40.80686698676294]]]}},{"type":"Feature","properties":{"rid":10},"geometry":{"type":"Polygon","coordinates":[[[29.36343426582169,40.806416940365146],[29.362284567460943,40.8066476364178],[29.362311040778458,40.80669301924783],[29.36343426582169,40.806485014610196],[29.36343426582169,40.806416940365146]]]}},{"type":"Feature","properties":{"rid":11},"geometry":{"type":"Polygon","coordinates":[[[29.360737769337437,40.806545525050225],[29.360813407387486,40.8065114879277],[29.360601620847348,40.80570972459718],[29.360518418992292,40.80572863410969],[29.360737769337437,40.806545525050225]]]}},{"type":"Feature","properties":{"rid":12},"geometry":{"type":"Polygon","coordinates":[[[29.36183073916065,40.80541473620198],[29.359217444531442,40.80591016542981],[29.359232572141455,40.80595933016234],[29.36183073916065,40.80545633712951],[29.36183073916065,40.80541473620198]]]}}]};
+/* ======================================================================
+   GEOJSON VERİLERİ
+   ====================================================================== */
+const NORTH_BOUNDARY = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[29.3651219,40.811679],[29.3654851,40.8116756],[29.3656257,40.8116375],[29.3659146,40.8113133],[29.3660008,40.8111401],[29.3658513,40.8100857],[29.3650108,40.8075159],[29.3654785,40.8074143],[29.365415310719484,40.807186908577606],[29.354663775254867,40.80923140752107],[29.3525039,40.8098484],[29.353029,40.8106572],[29.3538331,40.8117061],[29.3547119,40.8114336],[29.3548223,40.8114967],[29.3549692,40.8118689],[29.3542039,40.8120123],[29.3542971,40.8128484],[29.3534084,40.8135101],[29.3523795,40.8138414],[29.3518477,40.8139846],[29.3503912,40.8136372],[29.3500402,40.8128964],[29.3499021,40.812439],[29.3517695,40.8120418],[29.3510488,40.8101614],[29.3491712,40.8104593],[29.3476991,40.8106063],[29.3477803,40.8110104],[29.3467601,40.8111713],[29.3465459,40.8114887],[29.3468353,40.8124095],[29.3471558,40.8134102],[29.3479901,40.8161594],[29.3489726,40.8191528],[29.350236,40.8189207],[29.3502982,40.818116],[29.3493051,40.8154883],[29.3534758,40.8148155],[29.3548081,40.8185674],[29.3548947,40.820128],[29.356021,40.8200563],[29.3563565,40.8200349],[29.356618,40.8199819],[29.3576107,40.8197807],[29.3599422,40.8178926],[29.3608495,40.8172066],[29.3618011,40.8164887],[29.3620116,40.8163298],[29.362093,40.8162767],[29.3627621,40.8156848],[29.3630493,40.8153821],[29.3630335,40.8153737],[29.3631928,40.8151685],[29.3633643,40.8147618],[29.363348,40.8147632],[29.36337,40.814488],[29.3633403,40.814278],[29.3633265,40.8140735],[29.3633765,40.8138168],[29.3634564,40.8135839],[29.3635659,40.8134553],[29.3636835,40.8133104],[29.3638972,40.8131283],[29.3642166,40.8128693],[29.3645628,40.8126093],[29.3647634,40.8123445],[29.3648255,40.8121542],[29.3648675,40.8119589],[29.3648788,40.8119574],[29.364928,40.8117837],[29.3650062,40.811729],[29.3651219,40.811679]]]}}]};
+const SOUTH_BOUNDARY = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[29.354663775254867,40.80923140752107],[29.36541527796989,40.807186873700736],[29.3653252,40.806911],[29.3651706,40.8068311],[29.3650346,40.8068565],[29.3649764,40.8066876],[29.3648844,40.8064953],[29.3645896,40.8052604],[29.3643851,40.8047843],[29.364259,40.8047047],[29.3622091,40.8040009],[29.3590944,40.8029314],[29.3553506,40.8027653],[29.3549791,40.8027817],[29.3547636,40.8028957],[29.3545591,40.8030505],[29.3534522,40.8054617],[29.3534747,40.8055468],[29.354663775254867,40.80923140752107]]]}}]};
+const SE_BOUNDARY = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[29.364916964055976,40.80728589566465],[29.36541528814551,40.80718691348248],[29.36532654549943,40.80689679329337],[29.36518319199422,40.80683194289816],[29.365043251667707,40.806852421970326],[29.36488283226902,40.80648038549253],[29.36459441866925,40.805267000466294],[29.364386214768835,40.80478232909154],[29.364258220567756,40.80470041280285],[29.359092374612192,40.802930679649265],[29.358267945944913,40.80289842110069],[29.35985337206879,40.80824512243859],[29.364916964055976,40.80728589566465]]]}}]};
+const SW_PLACEHOLDER_BOUNDARY = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[29.354663775254867,40.80923140752107],[29.359853748904435,40.808244745602956],[29.35826953179626,40.80289518659539],[29.3553506,40.8027653],[29.3549791,40.8027817],[29.3547636,40.8028957],[29.3545591,40.8030505],[29.3534522,40.8054617],[29.3534747,40.8055468],[29.354663775254867,40.80923140752107]]]}}]};
 
-/* ====================================================================== */
+const SE_BUILDINGS = { "type": "FeatureCollection", "name": "GTU-SouthEastBuilding", "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } }, "features": [ {"type":"Feature","properties":{"name":"Kimya ve Çevre Mühendisliği Bölümü","id":14},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.36273805104911,40.805337272727677],[29.362062007349419,40.805457248734243],[29.3621604,40.8057387],[29.3621398,40.8057424],[29.3622011,40.8059352],[29.3622259,40.8059307],[29.362330597901789,40.806249664334828],[29.362997197901787,40.806127764334825],[29.3628946,40.805817],[29.3629064,40.8058149],[29.3628743,40.8057144],[29.3628413,40.8056109],[29.3628273,40.8056134],[29.36273805104911,40.805337272727677]],[[29.3623165,40.8057183],[29.3626562,40.8056544],[29.3626587,40.8056621],[29.3626495,40.8056638],[29.3627009,40.8058223],[29.3627103,40.8058205],[29.3627158,40.8058372],[29.3623764,40.805901],[29.3623706,40.8058848],[29.3623197,40.805726],[29.3623165,40.8057183]]]]}}, {"type":"Feature","properties":{"name":"Temel Bilimler Fakültesi","id":2},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.359507370448931,40.805784180446672],[29.360068755104415,40.805683206281671],[29.359915163766463,40.805225785137274],[29.3596317,40.8052764],[29.359347424356489,40.805320591295327],[29.359507370448931,40.805784180446672]]]]}}, {"type":"Feature","properties":{"name":"Harita ve Endüstri Mühendisliği Bölümü","id":16},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.3619523,40.8070365],[29.3622447,40.8069832],[29.3620858,40.8064744],[29.3617927,40.8065253],[29.3619523,40.8070365]]]]}}, {"type":"Feature","properties":{"name":"Biyomühendislik Bölümü","id":17},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.362576,40.8070664],[29.363257,40.806938],[29.3632228,40.8068341],[29.3631844,40.8067173],[29.3625034,40.8068457],[29.362576,40.8070664]]]]}}, {"type":"Feature","properties":{"name":"Yer ve Deniz Bilimleri Enstitüsü","id":1},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.3619374,40.8050487],[29.36205,40.8050279],[29.3620074,40.8048956],[29.3620483,40.8048881],[29.3620405,40.8048638],[29.3622603,40.8048232],[29.362244,40.8047725],[29.362228,40.8047227],[29.3620134,40.8047623],[29.3620057,40.8047386],[29.3619619,40.8047467],[29.3619277,40.8046405],[29.3619189,40.8046132],[29.3618012,40.804635],[29.3618451,40.8047713],[29.361809,40.804778],[29.3618531,40.8049148],[29.3618919,40.8049077],[29.3619374,40.8050487]]]]}}, {"type":"Feature","properties":{"name":"Merkezi Araştırma Laboratuvarı","id":7},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.359627851627256,40.805209585597424],[29.360173509660882,40.805103066717926],[29.360105176794793,40.804868926162065],[29.359557826573656,40.804965782517854],[29.359627851627256,40.805209585597424]]]]}}, {"type":"Feature","properties":{"name":"SUMER","id":4},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.360843166953071,40.806286052817462],[29.361100109352495,40.806246332253295],[29.3610284,40.8059997],[29.3607731,40.8060488],[29.360843166953071,40.806286052817462]]]]}}, {"type":"Feature","properties":{"name":null,"id":18},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.3614381,40.8041862],[29.3615726,40.8042289],[29.3618346,40.8041832],[29.3618027,40.8040785],[29.3616218,40.80411],[29.361699,40.803971],[29.3615787,40.8039327],[29.3614381,40.8041862]]]]}}, {"type":"Feature","properties":{"name":"Sera","id":6},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.362688134010796,40.80641420358608],[29.362744156912022,40.806570715996322],[29.363116470542703,40.806495851312157],[29.363066979459557,40.806345870719987],[29.362688134010796,40.80641420358608]]]]}}, {"type":"Feature","properties":{"name":"KYK Nilüfer Hatun Kız Yurdu","id":8},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.3639824,40.8067734],[29.3647738,40.8066605],[29.3645968,40.8059495],[29.36435,40.8059847],[29.364482,40.8065151],[29.3639374,40.8065927],[29.3639824,40.8067734]]]]}}, {"type":"Feature","properties":{"name":"KYK Nilüfer Hatun Kız Yurdu","id":9},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.364294,40.8057469],[29.3645341,40.8057139],[29.3643665,40.8050144],[29.3635646,40.8051246],[29.3636071,40.805302],[29.364169,40.8052249],[29.364294,40.8057469]]]]}}, {"type":"Feature","properties":{"name":"KYK Nilüfer Hatun Kız Yurdu","id":10},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.363848258380294,40.806394172071521],[29.364196112429564,40.806348504043783],[29.363958578028257,40.805457031464115],[29.363610623978985,40.805502699491853],[29.363848258380294,40.806394172071521]]]]}}, {"type":"Feature","properties":{"name":"Sosyal Alan-1","id":5},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.359404,40.8059923],[29.359579799299123,40.806594842651826],[29.359832999299122,40.806551342651829],[29.3596573,40.8059488],[29.359404,40.8059923]]]]}}, {"type":"Feature","properties":{"name":"Kuzey-Girişi","id":11},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.363553191667691,40.80754210411483],[29.363725028727977,40.807508942576888],[29.363685837819489,40.807363232788923],[29.36393228834017,40.807321780866474],[29.363531335199493,40.807089650100799],[29.363414516145347,40.807114018806736],[29.363553191667691,40.80754210411483]]]]}}, {"type":"Feature","properties":{"name":"TeknoPark","id":3},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.359958818448547,40.803937260004034],[29.360326340578588,40.803866672938931],[29.360178234645591,40.803509584282544],[29.359816197920463,40.803576019526872],[29.359958818448547,40.803937260004034]]]]}}, {"type":"Feature","properties":{"name":"Kapalı Yüzme Salonu","id":15},"geometry":{"type":"MultiPolygon","coordinates":[[[[29.358982416371706,40.80416216926961],[29.359499872903061,40.804051444803335],[29.359429476873181,40.803851448267956],[29.359497130200598,40.803836915624252],[29.359421248765791,40.803643838770192],[29.358781284857749,40.803778785017606],[29.358847109716841,40.803942796241238],[29.358894649892886,40.803932415796055],[29.358982416371706,40.80416216926961]]]]}} ] }
+const SE_PARKING = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"","id":0},"geometry":{"type":"Polygon","coordinates":[[[29.362254678794272,40.80531839689383],[29.36269582773854,40.80524001507687],[29.36268276410237,40.80519378990274],[29.36295609556669,40.80514655983353],[29.36288273822516,40.804913424172796],[29.362739038227378,40.80482499340492],[29.3625672011671,40.804857652495336],[29.362553132635835,40.80480489550313],[29.36213107669828,40.80488729690047],[29.362254678794272,40.80531839689383]]]}},{"type":"Feature","properties":{"name":"","id":1},"geometry":{"type":"Polygon","coordinates":[[[29.359249540029374,40.80527116682464],[29.359570604010443,40.80521539514717],[29.35952236904615,40.805027982213],[29.35920431975035,40.805087271023275],[29.359249540029374,40.80527116682464]]]}},{"type":"Feature","properties":{"name":"","id":2},"geometry":{"type":"Polygon","coordinates":[[[29.361832622856728,40.80760754790752],[29.363376141714074,40.80732215770213],[29.363339965490855,40.80716539406818],[29.36179644663351,40.807468872385186],[29.361832622856728,40.80760754790752]]]}},{"type":"Feature","properties":{"name":"","id":3},"geometry":{"type":"Polygon","coordinates":[[[29.36000478149507,40.804081245426886],[29.360358504566545,40.80401693214117],[29.36031629897279,40.80387825661882],[29.35995654653078,40.80395462864562],[29.36000478149507,40.804081245426886]]]}},{"type":"Feature","properties":{"name":"","id":4},"geometry":{"type":"Polygon","coordinates":[[[29.35887125983421,40.80369737550273],[29.359279247240515,40.80361497410539],[29.359241061227117,40.80350644543574],[29.35883709340117,40.80358482725271],[29.35887125983421,40.80369737550273]]]}},{"type":"Feature","properties":{"name":"","id":5},"geometry":{"type":"Polygon","coordinates":[[[29.364005347353817,40.807296438668416],[29.365214989817485,40.807080135000454],[29.36516072548267,40.80688267311542],[29.365052196813032,40.80689473185649],[29.365040138071958,40.80685704829063],[29.363868179174137,40.80707184461597],[29.36382748092302,40.80713213832133],[29.36384707637726,40.80720750545302],[29.364005347353817,40.807296438668416]]]}}]};
+const SE_GARDENS = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"","id":17},"geometry":{"type":"Polygon","coordinates":[[[29.35977122189526,40.80784228511972],[29.359878243222266,40.808220628120814],[29.363538071137263,40.8075347872224],[29.3634016566289,40.80711574597019],[29.36334098608788,40.807127427875606],[29.363407685999437,40.80733204963815],[29.36181291749281,40.80764030120678],[29.361750362773503,40.807435302608575],[29.35977122189526,40.80784228511972]]]}},{"type":"Feature","properties":{"name":"","id":1},"geometry":{"type":"Polygon","coordinates":[[[29.363281398949308,40.80608183453517],[29.363044729863937,40.805271023906876],[29.362772922033955,40.80532414363758],[29.36302113112109,40.80613006949945],[29.363281398949308,40.80608183453517]]]}},{"type":"Feature","properties":{"name":"","id":2},"geometry":{"type":"Polygon","coordinates":[[[29.362184053511296,40.806299519933916],[29.362289567495683,40.80628017570341],[29.362034826590488,40.80544535910778],[29.361928684546893,40.80546533139778],[29.362184053511296,40.806299519933916]]]}},{"type":"Feature","properties":{"name":"","id":3},"geometry":{"type":"Polygon","coordinates":[[[29.36201070910847,40.80726409360811],[29.362584504204644,40.807158579623696],[29.36248501959077,40.80683399850975],[29.362239825188905,40.806881731026515],[29.362271730608,40.80698850112979],[29.361946087186965,40.807056081888035],[29.36201070910847,40.80726409360811]]]}},{"type":"Feature","properties":{"name":"","id":4},"geometry":{"type":"Polygon","coordinates":[[[29.36232134730311,40.806653368617404],[29.362727324919284,40.80657197211515],[29.362667408049553,40.80640541075401],[29.363083057780987,40.80633280708384],[29.363134307430553,40.80649258540308],[29.363393821587415,40.80644158697731],[29.363307149385957,40.80616800428915],[29.362230404297502,40.80637551512515],[29.36232134730311,40.806653368617404]]]}},{"type":"Feature","properties":{"name":"","id":5},"geometry":{"type":"Polygon","coordinates":[[[29.36260435088267,40.807159082071266],[29.363372970014364,40.807020406548894],[29.363429746586924,40.80698272298301],[29.36343577595746,40.806977447283785],[29.363452859173982,40.80696312752876],[29.363470696061817,40.80694579308847],[29.363478232775,40.80693499046626],[29.36349883312434,40.806906350956204],[29.363504736882987,40.80688323836915],[29.363508630851445,40.80684153522292],[29.36350044911549,40.80680269442037],[29.36340361931455,40.806466960578305],[29.36233240114909,40.806682510575],[29.362380133665862,40.80684429868442],[29.36319309379331,40.80668853994554],[29.363274490295566,40.806950817563916],[29.362579982176747,40.807079192911644],[29.36260435088267,40.807159082071266]]]}},{"type":"Feature","properties":{"name":"","id":6},"geometry":{"type":"Polygon","coordinates":[[[29.360828481438602,40.80652866741723],[29.36208879458697,40.80630782613489],[29.361835511930096,40.80548294846473],[29.36061431317268,40.80570729129344],[29.360701841263662,40.80603496821237],[29.361062464979703,40.80597983768363],[29.361138837006507,40.806249149567634],[29.360929818827877,40.80628356722444],[29.360774060089,40.806309694496775],[29.360828481438602,40.80652866741723]]]}},{"type":"Feature","properties":{"name":"","id":7},"geometry":{"type":"Polygon","coordinates":[[[29.359886643516035,40.80669447510692],[29.36072381533446,40.80654433750019],[29.360503115250314,40.80572886513495],[29.35964995931928,40.80588412142629],[29.359886643516035,40.80669447510692]]]}},{"type":"Feature","properties":{"name":"","id":8},"geometry":{"type":"Polygon","coordinates":[[[29.361991741713663,40.807265852174496],[29.36175106933971,40.806457414074934],[29.359806597341432,40.80679757106276],[29.361347603961256,40.80738794692786],[29.361991741713663,40.807265852174496]]]}},{"type":"Feature","properties":{"name":"","id":9},"geometry":{"type":"Polygon","coordinates":[[[29.361172752215694,40.8074206060183],[29.35965385328783,40.80682771791545],[29.359600091400534,40.80683726441878],[29.359847131298096,40.807604457750884],[29.359947031430213,40.80765173188888],[29.361172752215694,40.8074206060183]]]}},{"type":"Feature","properties":{"name":"","id":10},"geometry":{"type":"Polygon","coordinates":[[[29.360123516130162,40.805722584540625],[29.361804988241737,40.805415243658096],[29.36161754390456,40.8048277254634],[29.359953024568167,40.80516134873431],[29.360123516130162,40.805722584540625]]]}},{"type":"Feature","properties":{"name":"","id":11},"geometry":{"type":"Polygon","coordinates":[[[29.359073400761524,40.80503925587968],[29.36012351613017,40.804844306232276],[29.36019687347172,40.805093520214506],[29.361611514534022,40.80481466182722],[29.36148009309818,40.80439728493247],[29.360577194860365,40.80412144123046],[29.35888850006503,40.8044463677768],[29.359073400761524,40.80503925587968]]]}},{"type":"Feature","properties":{"name":"","id":12},"geometry":{"type":"Polygon","coordinates":[[[29.36238000805392,40.80589291425831],[29.362696047559602,40.805835635238196],[29.362643290567398,40.805661788387695],[29.36232599494284,40.805722082093055],[29.36238000805392,40.80589291425831]]]}},{"type":"Feature","properties":{"name":"","id":13},"geometry":{"type":"Polygon","coordinates":[[[29.363642407510028,40.80679932962911],[29.363915738974377,40.80675913382552],[29.363499712407304,40.805158335947866],[29.363200253670616,40.80520757580725],[29.363642407510028,40.80679932962911]]]}},{"type":"Feature","properties":{"name":"","id":15},"geometry":{"type":"Polygon","coordinates":[[[29.36190899488353,40.805396276263245],[29.36224086148681,40.80533522888657],[29.36209728710091,40.804859976315235],[29.362049931419822,40.80486883195321],[29.36205803338648,40.80489351468884],[29.362020475432516,40.80490023492475],[29.362063685921363,40.805035895761826],[29.361933049559738,40.80506001324397],[29.36188732683317,40.804916062022414],[29.361848638372226,40.804924603630674],[29.36179939851285,40.804774120591034],[29.36183557473607,40.80476733754918],[29.36179035445704,40.80462790835552],[29.361924005503933,40.8046017810832],[29.361967467216555,40.804738949262905],[29.362008919138994,40.80473216622105],[29.362016455852164,40.80475628370319],[29.362063434697593,40.80474723964739],[29.362008416691438,40.80456259017471],[29.361600178061373,40.80442944157533],[29.36190899488353,40.805396276263245]]]}},{"type":"Feature","properties":{"name":"","id":16},"geometry":{"type":"Polygon","coordinates":[[[29.359288416908193,40.8058694562385],[29.359493415506435,40.80583528980546],[29.359315549075603,40.80528460729646],[29.35911356516263,40.805323798204945],[29.359288416908193,40.8058694562385]]]}},{"type":"Feature","properties":{"name":"","id":19},"geometry":{"type":"Polygon","coordinates":[[[29.361395572001076,40.804181703533445],[29.361356381092595,40.80416889112105],[29.361320958540702,40.804224662798504],[29.361960448653114,40.8044451116587],[29.361989088163153,40.80439951454403],[29.361844760105967,40.80434751122317],[29.36190769166093,40.80425707066514],[29.362110052409523,40.8043444965379],[29.36230619536976,40.804045477442905],[29.36147828742813,40.80376511171295],[29.361458315138233,40.803802041607476],[29.36219314467224,40.8040537678274],[29.362123430075417,40.804158528140455],[29.36216412832653,40.80417435523811],[29.362134358309525,40.804216183996196],[29.361882632089657,40.80410916266919],[29.361841933838544,40.804054144663056],[29.361807641793618,40.80406469606149],[29.361847209537757,40.80418754448615],[29.36157626469932,40.804239547807015],[29.361395572001076,40.804181703533445]]]}},{"type":"Feature","properties":{"name":"","id":18},"geometry":{"type":"Polygon","coordinates":[[[29.3622361039373,40.80417397840244],[29.363270894655436,40.80451501467331],[29.363242255145398,40.8045587276097],[29.363961257581746,40.804784452169145],[29.364001955832858,40.80489260400312],[29.363100564937813,40.80507310828353],[29.363129958119174,40.805178622267896],[29.36444209988195,40.8049917117813],[29.36437653047738,40.80479349622496],[29.364240869640327,40.80470757769483],[29.362314485754258,40.80404886896383],[29.3622361039373,40.80417397840244]]]}},{"type":"Feature","properties":{"name":"","id":20},"geometry":{"type":"Polygon","coordinates":[[[29.363579146224062,40.80702549383],[29.36365639753405,40.80709219374156],[29.363724227952574,40.80709407791985],[29.36500283134175,40.8068359454938],[29.364919173825573,40.806652049692474],[29.36478388982417,40.80667164514669],[29.363646599806923,40.80683669916511],[29.363645846135608,40.806918095667335],[29.36362135181781,40.806954648726204],[29.363579146224062,40.80702549383]]]}},{"type":"Feature","properties":{"name":"","id":21},"geometry":{"type":"Polygon","coordinates":[[[29.36124691033384,40.8041385558505],[29.360438974682097,40.80387552456089],[29.360589332109804,40.803618522641806],[29.361260853253185,40.80385592910664],[29.36113725115721,40.80406620340406],[29.36126838996636,40.8041076553265],[29.361471881221924,40.803758705506766],[29.36013788299097,40.803311024744524],[29.360197423025006,40.803494166874536],[29.360385840854235,40.804006663370046],[29.360600637179562,40.80398179221659],[29.361217893988126,40.80418754448611],[29.36124691033384,40.8041385558505]]]}},{"type":"Feature","properties":{"name":"","id":22},"geometry":{"type":"Polygon","coordinates":[[[29.3584085841543,40.80306532789519],[29.35858833476343,40.80364527797353],[29.358800681656962,40.8036102322573],[29.358789941840683,40.80355973627907],[29.35925608755021,40.8034813544621],[29.360142781854563,40.803379608834334],[29.360117910701103,40.803302734360024],[29.35908311998295,40.80294700149843],[29.358290257757545,40.80291534730312],[29.358328694994707,40.80307286460836],[29.3584085841543,40.80306532789519]]]}},{"type":"Feature","properties":{"name":"","id":23},"geometry":{"type":"Polygon","coordinates":[[[29.358982128026483,40.80369615078745],[29.358606799710653,40.803768503233876],[29.358763563344574,40.80425989693251],[29.358847974532072,40.80429004378519],[29.359984510878,40.80408805987225],[29.359963408081125,40.80403379553743],[29.3598375449712,40.804060927704846],[29.35975840948292,40.803817491869474],[29.359877489550996,40.80379789641523],[29.359806644447204,40.803564258306984],[29.360185741119622,40.803498688902415],[29.360152579581676,40.80339242124673],[29.35926475477033,40.803499442573745],[29.35930093099354,40.80360043453021],[29.35935745634231,40.80359289781704],[29.359365746726798,40.80363284239684],[29.359425286760835,40.803623798341036],[29.35951120529097,40.80384085568032],[29.359448650571665,40.80385592910666],[29.35952024934677,40.80405678251262],[29.35897534498463,40.804175108909384],[29.358891310632792,40.80394712333601],[29.35884458301114,40.803958051570106],[29.35876846220813,40.803771141083516],[29.358991172082284,40.803727804982785],[29.358982128026483,40.80369615078745]]]}}]};
+const SE_ROADS = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"Giriş-1","id":1},"geometry":{"type":"Polygon","coordinates":[[[29.363554465300872,40.806909613528745],[29.36363998948104,40.80689897125759],[29.363130130835042,40.805203713241774],[29.363046222095075,40.80521878666812],[29.363554465300872,40.806909613528745]]]}},{"type":"Feature","properties":{"name":"","id":2},"geometry":{"type":"Polygon","coordinates":[[[29.36346526334737,40.80707181321299],[29.36344416055049,40.8070235782487],[29.35984524034685,40.807687659605975],[29.35984524034685,40.807736824338505],[29.36346526334737,40.80707181321299]]]}},{"type":"Feature","properties":{"name":"","id":3},"geometry":{"type":"Polygon","coordinates":[[[29.361332530534927,40.80739146406069],[29.359796045942996,40.806801088195556],[29.359663709026734,40.80682538583542],[29.36118883053712,40.80742110846584],[29.361332530534927,40.80739146406069]]]}},{"type":"Feature","properties":{"name":"","id":4},"geometry":{"type":"Polygon","coordinates":[[[29.36210193474068,40.80630532948362],[29.362170141994877,40.80629415002566],[29.36191750508885,40.80546633629281],[29.361848826790045,40.80547842643682],[29.36210193474068,40.80630532948362]]]}},{"type":"Feature","properties":{"name":"","id":5},"geometry":{"type":"Polygon","coordinates":[[[29.363023768970606,40.80520003909411],[29.35927174193,40.805890653244376],[29.359286815356345,40.80594290778903],[29.363040852187126,40.80525631321913],[29.363023768970606,40.80520003909411]]]}},{"type":"Feature","properties":{"name":"","id":6},"geometry":{"type":"Polygon","coordinates":[[[29.361900069524555,40.80539882782884],[29.36158259239731,40.80442542199498],[29.3615019809693,40.80440164994543],[29.361824301069287,40.80541207195796],[29.361900069524555,40.80539882782884]]]}},{"type":"Feature","properties":{"name":"","id":7},"geometry":{"type":"Polygon","coordinates":[[[29.359597704774608,40.80682947648178],[29.36330551643122,40.806160090740214],[29.363289940557333,40.80610230927256],[29.35958338501951,40.806767549821835],[29.359597704774608,40.80682947648178]]]}},{"type":"Feature","properties":{"name":"","id":8},"geometry":{"type":"Polygon","coordinates":[[[29.36230725887596,40.80686698676294],[29.362363987413495,40.806855641055435],[29.362214828423596,40.80636672229311],[29.362151520032956,40.80637752491533],[29.36230725887596,40.80686698676294]]]}},{"type":"Feature","properties":{"name":"","id":9},"geometry":{"type":"Polygon","coordinates":[[[29.363395077706286,40.80644736512406],[29.362324864435905,40.8066591467642],[29.3623312706421,40.806679621501644],[29.36340010218174,40.80646319222173],[29.363395077706286,40.80644736512406]]]}},{"type":"Feature","properties":{"name":"","id":10},"geometry":{"type":"Polygon","coordinates":[[[29.360737769337437,40.806545525050225],[29.360816265682715,40.80652951529765],[29.36060577156442,40.80570779374098],[29.360519853034276,40.80572437450996],[29.360737769337437,40.806545525050225]]]}},{"type":"Feature","properties":{"name":"","id":11},"geometry":{"type":"Polygon","coordinates":[[[29.358854804677065,40.804425673218766],[29.360577697307907,40.804093806615505],[29.362236025429176,40.804618613075924],[29.362920610208892,40.804856521988384],[29.363040192724533,40.805196176528604],[29.363123599016955,40.80518411778753],[29.36299798713078,40.804801252758466],[29.36058473157353,40.803999346477106],[29.358824406600608,40.80431412986386],[29.358854804677065,40.804425673218766]]]}},{"type":"Feature","properties":{"name":"","id":12},"geometry":{"type":"Polygon","coordinates":[[[29.364005896905475,40.807301934188466],[29.363554699010326,40.807023578248696],[29.36351651299693,40.807062769157184],[29.363972735367526,40.807331076146056],[29.364005896905475,40.807301934188466]]]}},{"type":"Feature","properties":{"name":"","id":13},"geometry":{"type":"Polygon","coordinates":[[[29.361231758399256,40.8042164038164],[29.36128501783899,40.80422996990013],[29.361493031122507,40.80388679822707],[29.362059791952937,40.80408174787441],[29.36208792901544,40.804043561861015],[29.361458864689464,40.80382851431188],[29.361231758399256,40.8042164038164]]]}},{"type":"Feature","properties":{"name":"","id":14},"geometry":{"type":"Polygon","coordinates":[[[29.358980243848247,40.8041472230706],[29.359496131864688,40.80405150681335],[29.35942227207562,40.8038423630229],[29.359485957301914,40.80382691276091],[29.359419634226025,40.80364980000143],[29.35878428930585,40.80377867779663],[29.35885061238174,40.80394976118557],[29.358899601017338,40.803938456115816],[29.358980243848247,40.8041472230706]]]}}]};
+
+const SE_FOREST = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"id":1},"geometry":{"type":"Polygon","coordinates":[[[29.362055443061898,40.80445770753552],[29.363066586036815,40.80479403047152],[29.363099498466383,40.80498225984819],[29.363168980262124,40.805037621327976],[29.363966192444888,40.80487984098886],[29.36393693695194,40.80479679855445],[29.363234805121262,40.804578119646735],[29.363168980262138,40.80469437940889],[29.36229314394208,40.80440372962163],[29.362382738889217,40.80426117235596],[29.362209034399854,40.80421273049696],[29.362055443061898,40.80445770753552]]]}}]};
 
 /* ======================================================================
-   SUNUCU ADRESİ — her tunnel yeniden başlatıldığında burayı güncelleyin
-   (cloudflared/ngrok yeni bir URL verdiğinde). Boş bırakırsanız (''),
-   veriler sadece telefonda yerel olarak saklanır, sunucuya gönderilmez.
-   Örnek: 'https://kelime-kelime-1234.trycloudflare.com'
+   GÜNEY-DOĞU BİNA RENK/KATEGORİ BİLGİSİ — id, shapefile'daki "id" alanıyla
+   birebir eşleşir. Oda/kat verisi artık burada değil, yüklenen Excel'den gelir.
    ====================================================================== */
-const SERVER_URL = 'https://suggestions-purposes-trip-gear.trycloudflare.com';
+const SE_BUILDING_INFO = {
+  1:  { label:"Yer ve Deniz Bilimleri Enstitüsü", color:"#7d5bc2" },
+  2:  { label:"Temel Bilimler Fakültesi", color:"#2f7dc4" },
+  3:  { label:"TeknoPark", color:"#5a6472" },
+  4:  { label:"SUMER", color:"#7d5bc2" },
+  5:  { label:"Sosyal Alan-1", color:"#d98a2b" },
+  6:  { label:"Sera", color:"#3fa142" },
+  7:  { label:"Merkezi Araştırma Laboratuvarı", color:"#7d5bc2" },
+  8:  { label:"KYK-Kız Yurdu", color:"#d98a2b" },
+  9:  { label:"KYK-Kız Yurdu", color:"#d98a2b" },
+  10: { label:"KYK-Kız Yurdu", color:"#d98a2b" },
+  11: { label:"Kuzey-Girişi", color:"#1f9e8b", entrance:true },
+  12: { label:"Kimya ve Çevre Mühendisliği Bölümü-Çardak", color:"#d98a2b" },
+  13: { label:"Kimya ve Çevre Mühendisliği Bölümü-Çardak", color:"#d98a2b" },
+  14: { label:"Kimya ve Çevre Mühendisliği Bölümü", color:"#2f7dc4" },
+  15: { label:"Kapalı Yüzme Salonu", color:"#3fa142" },
+  16: { label:"Harita ve Endüstri Mühendisliği Bölümü", color:"#2f7dc4" },
+  17: { label:"Biyomühendislik Bölümü", color:"#2f7dc4" },
+  18: { label:"Bina (adsız)", color:"#8a8f98" }
+};
+
+/* ======================================================================
+   BÖLGE AĞACI — yeni bölge eklemek için buraya bir düğüm eklemeniz yeterli.
+   Bir düğümün "children"ı varsa dokununca alt bölgeler gösterilir.
+   "data"sı varsa (children yoksa) dokununca içindeki katmanlar gösterilir.
+   İkisi de yoksa "placeholder" sayılır — dokununca sadece uyarı verir.
+   ====================================================================== */
+const ZONE_TREE = {
+  children: [
+    {
+      id:'kuzey', label:'Kuzey Kampüs', color:'#7d5bc2',
+      boundary: NORTH_BOUNDARY, children: [], data: null
+    },
+    {
+      id:'guney', label:'Güney Kampüs', color:'#2f7dc4',
+      boundary: SOUTH_BOUNDARY,
+      children: [
+        {
+          id:'guney_dogu', label:'Güney - Doğu', color:'#2f7dc4',
+          boundary: SE_BOUNDARY, children: [],
+          data: { buildings: SE_BUILDINGS, gardens: SE_GARDENS, parking: SE_PARKING, roads: SE_ROADS, forest: SE_FOREST, buildingInfo: SE_BUILDING_INFO }
+        },
+        {
+          id:'guney_bati', label:'Güney - Batı (bina verisi henüz yok)', color:'#9aa1ab',
+          boundary: SW_PLACEHOLDER_BOUNDARY, children: [], data: null, placeholder:true
+        }
+      ],
+      data: null
+    }
+  ]
+};
 /* ====================================================================== */
 
 const STORE_KEY = 'saha-gunlugu:kayitlar';
@@ -265,184 +375,417 @@ let entries = [];
 let participantName = '';
 let firstMeasurementTime = '';
 let recentEntries = [];
-let activeRoomBuilding = null;
+let navPath = []; // ZONE_TREE.children içindeki düğümlerin path'i
 
 function pad(n){ return n.toString().padStart(2,'0'); }
 function fmtTime(d){ return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }
 function fmtDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
-function tickClock(){ document.getElementById('clock').textContent = fmtTime(new Date()) + ' · ' + fmtDateTr(new Date()); }
 function fmtDateTr(d){ return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear(); }
+function tickClock(){ document.getElementById('clock').textContent = fmtTime(new Date()) + ' · ' + fmtDateTr(new Date()); }
 setInterval(tickClock, 1000); tickClock();
 
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   clearTimeout(showToast._h);
-  showToast._h = setTimeout(()=>t.classList.remove('show'), 1500);
+  showToast._h = setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+/* ---------- Özel metin girişi pop-up'ı (window.prompt yerine — bazı mobil/WebView ortamlarında native prompt çalışmıyor) ---------- */
+function showInputModal(title, defaultValue, onSave){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-box">
+        <h3>${title}</h3>
+        <textarea id="modalInput"></textarea>
+        <div class="modal-actions">
+          <button class="cancel" id="modalCancel">İptal</button>
+          <button class="save" id="modalSave">Kaydet</button>
+        </div>
+      </div>
+    </div>`;
+  const input = document.getElementById('modalInput');
+  input.value = defaultValue || '';
+  setTimeout(()=>{ input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 30);
+
+  function close(){ root.innerHTML = ''; }
+  document.getElementById('modalCancel').addEventListener('click', close);
+  document.getElementById('modalOverlay').addEventListener('click', (ev)=>{ if(ev.target.id === 'modalOverlay') close(); });
+  document.getElementById('modalSave').addEventListener('click', ()=>{
+    const val = input.value;
+    close();
+    onSave(val);
+  });
 }
 
 /* ---------- Harita ---------- */
-// Arka plan katmanı YOK — sadece kendi verimizin (bina + bahçe) poligonları,
-// nötr bir zemin üzerinde. Kampüs dışına kaydırma/zoom yapılamaz.
-const map = L.map('map', {
-  zoomControl:true,
-  attributionControl:false,
-  zoomSnap:0.1
-}).setView([40.80953, 29.35974], 15);
-
-let navZone = null; // null = sınır (bölge) seviyesi, 'guney' = bina seviyesi
-
-// ---- Bölge sınırı katmanı (Güney gerçek veri; Kuzey henüz veri yok — yer tutucu) ----
-const guneyBoundaryLayer = L.geoJSON(SOUTH_BOUNDARY_GEOJSON, {
-  style: { color:'#2f7dc4', weight:3, fillColor:'#2f7dc4', fillOpacity:0.28, dashArray:'6,4' }
-});
-guneyBoundaryLayer.eachLayer(layer=>{
-  layer.bindTooltip('Güney Kampüs — binaları görmek için dokunun', {sticky:true, className:'bld-label'});
-  layer.on('click', ()=> enterZone('guney'));
-});
-
-const guneyBounds = guneyBoundaryLayer.getBounds();
-// Kuzey için henüz shapefile yok — sınırın kuzeyine geçici bir yer tutucu kutu koyuyoruz.
-const gb = guneyBounds;
-const latSpan = gb.getNorth() - gb.getSouth();
-const kuzeyPlaceholderCoords = [[
-  [gb.getWest(),  gb.getNorth() + latSpan*0.05],
-  [gb.getEast(),  gb.getNorth() + latSpan*0.05],
-  [gb.getEast(),  gb.getNorth() + latSpan*0.55],
-  [gb.getWest(),  gb.getNorth() + latSpan*0.55],
-  [gb.getWest(),  gb.getNorth() + latSpan*0.05]
-]];
-const kuzeyBoundaryLayer = L.geoJSON(
-  { type:'Feature', properties:{}, geometry:{ type:'Polygon', coordinates: kuzeyPlaceholderCoords } },
-  { style:{ color:'#9aa1ab', weight:2, fillColor:'#9aa1ab', fillOpacity:0.18, dashArray:'4,5' } }
-);
-kuzeyBoundaryLayer.eachLayer(layer=>{
-  layer.bindTooltip('Kuzey Kampüs — bina verisi henüz eklenmedi', {sticky:true, className:'bld-label'});
-  layer.on('click', ()=> showToast('Kuzey kampüs verisi henüz yüklenmedi'));
-});
-
-const zoneGroup = L.featureGroup([guneyBoundaryLayer, kuzeyBoundaryLayer]).addTo(map);
-
-// ---- Yollar (görsel bağlam, tıklanamaz) ----
-const roadLayer = L.geoJSON(ROADS_GEOJSON, {
-  style: { color:'#b8bcc2', weight:1, fillColor:'#c9ccd1', fillOpacity:0.55, interactive:false }
-});
-
-// ---- Yeşil alanlar (bahçe/açık alan) ----
-const gardenLayer = L.geoJSON(GARDENS_GEOJSON, {
-  style: { color:'#3fa142', weight:1, fillColor:'#8fbf7f', fillOpacity:0.35 }
-});
-gardenLayer.eachLayer(layer=>{
-  const gid = layer.feature.properties.gid;
-  layer.on('click', ()=> logEntry(0, 'Yeşil Alan / Bahçe #' + gid, null, '#3fa142'));
-});
-
-// ---- Binalar ----
-const buildingLabelGroup = L.layerGroup();
-const buildingLayer = L.geoJSON(BUILDINGS_GEOJSON, {
-  style: (feature)=>{
-    const num = feature.properties.num;
-    const b = BUILDINGS[num];
-    const color = b ? b.color : '#5a6472';
-    return { color: color, weight:2, fillColor: color, fillOpacity:0.45 };
-  },
-  onEachFeature: (feature, layer)=>{
-    const num = feature.properties.num;
-    const b = BUILDINGS[num];
-    if(!b) return;
-    layer.on('click', ()=>{
-      if(b.rooms && b.rooms.length){ openRoomPicker(num); }
-      else { logEntry(num, b.label, null, b.color); }
-    });
-    const center = layer.getBounds().getCenter();
-    L.marker(center, {
-      icon: L.divIcon({ className:'bld-label', html: '#'+num, iconSize:[26,14] }),
-      interactive:false
-    }).addTo(buildingLabelGroup);
-  }
-});
+const map = L.map('map', { zoomControl:true, attributionControl:false, zoomSnap:0.1 }).setView([40.80953, 29.35974], 15);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 19,
+  attribution: 'Tiles © Esri'
+}).addTo(map);
+let currentLayerGroup = L.layerGroup().addTo(map);
+let currentLabelGroup = L.layerGroup().addTo(map);
 
 function fitAndLock(bounds, padRatio){
   const padded = bounds.pad(padRatio);
   map.fitBounds(padded);
   map.setMaxBounds(padded);
   map.setMinZoom(map.getZoom());
-  map.setMaxZoom(map.getZoom() + 5);
+  map.setMaxZoom(map.getZoom() + 8);
   map.options.maxBoundsViscosity = 1.0;
 }
 
-function showZoneLevel(){
-  navZone = null;
-  map.removeLayer(buildingLayer); map.removeLayer(gardenLayer); map.removeLayer(buildingLabelGroup); map.removeLayer(roadLayer);
-  if(!map.hasLayer(zoneGroup)) zoneGroup.addTo(map);
-  const allZoneBounds = L.featureGroup([guneyBoundaryLayer, kuzeyBoundaryLayer]).getBounds();
-  fitAndLock(allZoneBounds, 0.05);
-  renderMapBreadcrumb();
+function currentChildren(){
+  if(navPath.length === 0) return ZONE_TREE.children;
+  return navPath[navPath.length-1].children;
 }
 
-function enterZone(zoneId){
-  if(zoneId !== 'guney') return; // şimdilik sadece güney'de gerçek veri var
-  navZone = zoneId;
-  map.removeLayer(zoneGroup);
-  roadLayer.addTo(map);
-  gardenLayer.addTo(map);
-  buildingLayer.addTo(map);
-  buildingLabelGroup.addTo(map);
-  const group = L.featureGroup([buildingLayer, gardenLayer]);
-  fitAndLock(group.getBounds(), 0.06);
-  renderMapBreadcrumb();
-}
-
-function renderMapBreadcrumb(){
+function renderBreadcrumb(){
   const el = document.getElementById('mapBreadcrumb');
-  if(navZone === null){
+  if(navPath.length === 0){
     el.innerHTML = '<span class="crumb-path">Kampüs — bölge seçin</span>';
+    return;
+  }
+  const parentLabel = navPath.length >= 2 ? navPath[navPath.length-2].label : 'Kampüs';
+  const pathStr = navPath.map(n=>n.label.split(' (')[0]).join(' › ');
+  el.innerHTML = `<button class="crumb-back" id="backBtn">‹ ${parentLabel}</button><span class="crumb-path">${pathStr}</span>`;
+  document.getElementById('backBtn').addEventListener('click', goBack);
+}
+function goBack(){
+  navPath.pop();
+  renderCurrent();
+}
+
+function clearLayers(){
+  currentLayerGroup.clearLayers();
+  currentLabelGroup.clearLayers();
+}
+
+function renderCurrent(){
+  clearLayers();
+  renderBreadcrumb();
+  renderLegend(null);
+
+  const target = navPath.length ? navPath[navPath.length-1] : null;
+
+  if(target && target.data){
+    renderDataLevel(target.data, target.id);
   } else {
-    el.innerHTML = '<button class="crumb-back" id="backToZones">‹ Kampüs</button><span class="crumb-path">Güney Kampüs</span>';
-    document.getElementById('backToZones').addEventListener('click', showZoneLevel);
+    renderBoundaryLevel(currentChildren());
   }
 }
 
-// Başlangıç: bölge (sınır) seviyesi
-showZoneLevel();
+function renderBoundaryLevel(nodes){
+  renderLegend('zones');
+  const layers = [];
+  nodes.forEach(node=>{
+    if(!node.boundary) return;
+    const layer = L.geoJSON(node.boundary, {
+      style: { color: node.color, weight: node.placeholder?2:3, fillColor: node.color,
+               fillOpacity: node.placeholder?0.15:0.25, dashArray: node.placeholder?'4,5':'6,4' }
+    });
+    layer.eachLayer(l=>{
+      l.on('click', ()=> enterNode(node));
+      try{
+        const c = l.getBounds().getCenter();
+        L.marker(c, {
+          icon: L.divIcon({ className:'zone-label', html: node.label, iconSize:[140,18] }),
+          interactive:false
+        }).addTo(currentLabelGroup);
+      }catch(e){}
+    });
+    layer.addTo(currentLayerGroup);
+    layers.push(layer);
+  });
+  if(layers.length){
+    const group = L.featureGroup(layers);
+    fitAndLock(group.getBounds(), 0.03);
+  }
+}
 
-/* ---------- Oda seçimi (bina bazında, ör. Çevre Müh.) ---------- */
-function openRoomPicker(num){
-  activeRoomBuilding = num;
+function enterNode(node){
+  if(node.children && node.children.length){ navPath.push(node); renderCurrent(); return; }
+  if(node.data){ navPath.push(node); renderCurrent(); return; }
+  showToast('Bu bölge için veri henüz eklenmedi');
+}
+
+function renderDataLevel(data, regionId){
+  renderLegend('data');
+  const allLayers = [];
+
+  if(data.roads){
+    const roadLayer = L.geoJSON(data.roads, { style:{ color:'#b8bcc2', weight:1, fillColor:'#c9ccd1', fillOpacity:0.55 } });
+    roadLayer.eachLayer(l=>{
+      const rid = l.feature.properties.id;
+      const nm = l.feature.properties.name;
+      const label = nm ? nm : ('Yol #' + rid);
+      l.on('click', ()=> logEntry(null, label, null, '#607d8b'));
+      if(nm){
+        try{
+          const c = l.getBounds().getCenter();
+          L.marker(c, { icon: L.divIcon({ className:'bld-label', html: nm, iconSize:[100,30], iconAnchor:[50,15] }), interactive:false }).addTo(currentLabelGroup);
+        }catch(e){}
+      }
+    });
+    roadLayer.addTo(currentLayerGroup);
+    allLayers.push(roadLayer);
+  }
+  if(data.gardens){
+    const gardenLayer = L.geoJSON(data.gardens, { style:{ color:'#3fa142', weight:1, fillColor:'#8fbf7f', fillOpacity:0.35 } });
+    gardenLayer.eachLayer(l=>{
+      const gid = l.feature.properties.id;
+      const nm = l.feature.properties.name;
+      const label = nm ? nm : ('Yeşil Alan / Bahçe #' + gid);
+      l.on('click', ()=> logEntry(null, label, null, '#3fa142'));
+      if(nm){
+        try{
+          const c = l.getBounds().getCenter();
+          L.marker(c, { icon: L.divIcon({ className:'bld-label', html: nm, iconSize:[100,30], iconAnchor:[50,15] }), interactive:false }).addTo(currentLabelGroup);
+        }catch(e){}
+      }
+    });
+    gardenLayer.addTo(currentLayerGroup);
+    allLayers.push(gardenLayer);
+  }
+  if(data.forest){
+    const forestLayer = L.geoJSON(data.forest, { style:{ color:'#1f6b2e', weight:1, fillColor:'#2f7d3f', fillOpacity:0.45 } });
+    forestLayer.eachLayer(l=>{
+      const fid = l.feature.properties.id;
+      const nm = l.feature.properties.name;
+      const label = nm ? nm : ('Ormanlık Alan #' + fid);
+      l.on('click', ()=> logEntry(null, label, null, '#1f6b2e'));
+      if(nm){
+        try{
+          const c = l.getBounds().getCenter();
+          L.marker(c, { icon: L.divIcon({ className:'bld-label', html: nm, iconSize:[100,30], iconAnchor:[50,15] }), interactive:false }).addTo(currentLabelGroup);
+        }catch(e){}
+      }
+    });
+    forestLayer.addTo(currentLayerGroup);
+    allLayers.push(forestLayer);
+  }
+  if(data.parking){
+    const parkLayer = L.geoJSON(data.parking, { style:{ color:'#607d8b', weight:1, fillColor:'#90a4ae', fillOpacity:0.4 } });
+    parkLayer.eachLayer(l=>{
+      const pid = l.feature.properties.id;
+      const nm = l.feature.properties.name;
+      const label = nm ? nm : ('Otopark #' + pid);
+      l.on('click', ()=> logEntry(null, label, null, '#607d8b'));
+      if(nm){
+        try{
+          const c = l.getBounds().getCenter();
+          L.marker(c, { icon: L.divIcon({ className:'bld-label', html: nm, iconSize:[100,30], iconAnchor:[50,15] }), interactive:false }).addTo(currentLabelGroup);
+        }catch(e){}
+      }
+    });
+    parkLayer.addTo(currentLayerGroup);
+    allLayers.push(parkLayer);
+  }
+  if(data.buildings){
+    const infoMap = data.buildingInfo || {};
+    const bldLayer = L.geoJSON(data.buildings, {
+      style: (feature)=>{
+        const num = feature.properties.id;
+        const info = num ? infoMap[num] : null;
+        const color = info ? info.color : '#8a8f98';
+        return { color: color, weight:2, fillColor: color, fillOpacity:0.45 };
+      },
+      onEachFeature: (feature, layer)=>{
+        const num = feature.properties.id;
+        const info = num ? infoMap[num] : null;
+        const label = info ? info.label : (feature.properties.name || 'Bina (adsız)');
+        const color = info ? info.color : '#8a8f98';
+        layer.on('click', ()=> openBuildingPicker(regionId, num, label, color));
+        try{
+          const c = layer.getBounds().getCenter();
+          L.marker(c, {
+            icon: L.divIcon({ className:'bld-label', html: label, iconSize:[100,30], iconAnchor:[50,15] }),
+            interactive:false
+          }).addTo(currentLabelGroup);
+          if(info && info.entrance){
+            L.marker(c, {
+              icon: L.divIcon({
+                className:'entrance-marker',
+                html: '<span class="entrance-text">GİRİŞ</span><span class="entrance-arrow">⬇</span>',
+                iconSize:[70,44], iconAnchor:[35,44]
+              }),
+              interactive:false
+            }).addTo(currentLabelGroup);
+          }
+        }catch(e){}
+      }
+    });
+    bldLayer.addTo(currentLayerGroup);
+    allLayers.push(bldLayer);
+  }
+
+  if(allLayers.length){
+    const group = L.featureGroup(allLayers);
+    try{ fitAndLock(group.getBounds(), 0.03); }catch(e){}
+  }
+}
+
+function renderLegend(mode){
+  const el = document.getElementById('mapLegend');
+  if(mode === 'zones'){
+    el.innerHTML = `
+      <span><i style="background:#2f7dc4"></i>Aktif/veri var</span>
+      <span><i style="background:#9aa1ab"></i>Henüz veri yok</span>`;
+  } else if(mode === 'data'){
+    el.innerHTML = `
+      <span><i style="background:#8fbf7f"></i>Yeşil Alan</span>
+      <span><i style="background:#90a4ae"></i>Otopark</span>
+      <span><i style="background:#8a8f98"></i>Ortak Alan</span>
+      <span><i style="background:#2f7dc4"></i>Bölümler</span>`;
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+// Başlangıç: en üst seviye (Kuzey/Güney)
+renderCurrent();
+
+/* ---------- Kat / Oda seçimi (koda gömülü sabit veri — ROOM_DATA) ---------- */
+/* ======================================================================
+   ODA / KAT VERİSİ — site kurulumu sırasında Claude tarafından buraya
+   gömülür. Yapı: ROOM_DATA[bölge_id][bina_id] = [{kat, oda}, ...]
+   Bölge id'leri: 'guney_dogu', 'guney_bati', 'kuzey' (ZONE_TREE'deki id'lerle aynı).
+   Bina id'leri: harita üzerindeki bina numarasıyla (feature.properties.id) birebir aynı.
+   Örnek:
+     guney_dogu: {
+       14: [ {kat:"1", oda:"Amfi-1"}, {kat:"2", oda:"CEV113"}, {kat:"2", oda:"CEV112"} ]
+     }
+   Bir binanın burada hiç kaydı yoksa, o binaya tıklanınca kat/oda sorulmadan
+   direkt kayıt düşer.
+   ====================================================================== */
+const ROOM_DATA = {
+  guney_dogu: {
+    14: [ 
+        {kat:"-1", oda:"Yemekhane"},{kat:"-1", oda:"Bilgisayar Laboratuvarı"},{kat:"-1", oda:"Kimya Laboratuvarı"},
+        {kat:"Zemin", oda:"Amfi-1"}, {kat:"Zemin", oda:"Öğrenci Çalışma Odası"},{kat:"Zemin", oda:"ZL-16"},
+        {kat:"1", oda:"CEV111"}, {kat:"1", oda:"CEV112"},{kat:"1", oda:"CEV113"}  
+      ]
+  },
+  guney_bati: {},
+  kuzey: {}
+};
+
+
+let activeRoomState = null; // {regionId, buildingId, label, color, floor}
+
+function getFloorsForBuilding(regionId, buildingId){
+  const region = ROOM_DATA[regionId];
+  if(!region) return null;
+  const rows = region[buildingId];
+  if(!rows || !rows.length) return null;
+  const floors = {};
+  rows.forEach(r=>{
+    const k = (r.kat===undefined || r.kat===null || String(r.kat).trim()==='') ? '—' : String(r.kat).trim();
+    if(!floors[k]) floors[k] = [];
+    if(r.oda) floors[k].push(String(r.oda));
+  });
+  return floors;
+}
+
+// "1", "2.5" gibi sayısal kat adlarına ". Kat" ekler; "Zemin", "Çatı Katı" gibi
+// sayısal olmayan kat adlarını olduğu gibi bırakır.
+function isNumericFloor(k){ return /^-?\d+(\.\d+)?$/.test(String(k).trim()); }
+function floorLabel(k){
+  if(k === '—') return 'Kat belirtilmemiş';
+  return isNumericFloor(k) ? (k + '. Kat') : k;
+}
+function floorPrefix(k){
+  if(k === '—' || k === null || k === undefined) return '';
+  return isNumericFloor(k) ? (k + '. Kat — ') : (k + ' — ');
+}
+
+function openBuildingPicker(regionId, buildingId, label, color){
+  const floors = getFloorsForBuilding(regionId, buildingId);
+  if(!floors){ logEntry(buildingId, label, null, color); return; }
+  activeRoomState = { regionId, buildingId, label, color, floor:null };
   renderRoomArea();
 }
+
+function closeRoomArea(){ activeRoomState = null; renderRoomArea(); }
+
+function manualRoomEntry(){
+  if(!activeRoomState) return;
+  const { buildingId, label, color, floor } = activeRoomState;
+  showInputModal('Öğrencinin bulunduğu odayı / konumu yazın', '', (val)=>{
+    const roomText = (val || '').trim();
+    if(!roomText) return;
+    const finalRoom = floorPrefix(floor) + roomText + ' (manuel)';
+    logEntry(buildingId, label, finalRoom, color);
+    closeRoomArea();
+  });
+}
+
 function renderRoomArea(){
   const area = document.getElementById('roomArea');
-  if(activeRoomBuilding === null){ area.innerHTML=''; return; }
-  const b = BUILDINGS[activeRoomBuilding];
-  area.innerHTML = `
-    <div class="breadcrumb"><button class="crumb-back" id="closeRooms">‹ Haritaya dön</button></div>
-    <div class="section-label">#${activeRoomBuilding} ${b.label} — Oda Seç</div>
-    <div class="box-grid">` + b.rooms.map(r=>`<button class="nav-btn" data-room="${r}" style="background:${b.color}">${r}</button>`).join('') + `</div>`;
-  document.getElementById('closeRooms').addEventListener('click', ()=>{ activeRoomBuilding=null; renderRoomArea(); });
-  area.querySelectorAll('[data-room]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      logEntry(activeRoomBuilding, b.label, btn.getAttribute('data-room'), b.color);
-      activeRoomBuilding = null; renderRoomArea();
+  if(activeRoomState === null){ area.innerHTML=''; return; }
+  const { regionId, buildingId, label, color, floor } = activeRoomState;
+  const floors = getFloorsForBuilding(regionId, buildingId) || {};
+
+  if(floor === null){
+    // Kat seçimi
+    const floorKeys = Object.keys(floors).sort((a,b)=>{
+      const na = parseFloat(a), nb = parseFloat(b);
+      if(!isNaN(na) && !isNaN(nb)) return na-nb;
+      return a.localeCompare(b, 'tr');
     });
-  });
+    area.innerHTML = `
+      <div class="breadcrumb"><button class="crumb-back" id="closeRooms">‹ Haritaya dön</button></div>
+      <div class="section-label">#${buildingId} ${label} — Kat Seç</div>
+      <div class="box-grid">` +
+        floorKeys.map(k=>`<button class="nav-btn" data-floor="${k}" style="background:${color}">${floorLabel(k)}</button>`).join('') +
+        `<button class="nav-btn ghost" id="manualBuilding">Diğer / Farklı Konum</button>
+      </div>`;
+    document.getElementById('closeRooms').addEventListener('click', closeRoomArea);
+    document.getElementById('manualBuilding').addEventListener('click', manualRoomEntry);
+    area.querySelectorAll('[data-floor]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        activeRoomState.floor = btn.getAttribute('data-floor');
+        renderRoomArea();
+      });
+    });
+  } else {
+    // Oda seçimi (seçilen kat içinde)
+    const rooms = floors[floor] || [];
+    area.innerHTML = `
+      <div class="breadcrumb"><button class="crumb-back" id="backFloors">‹ Katlar</button></div>
+      <div class="section-label">#${buildingId} ${label} — ${floorPrefix(floor)}Oda Seç</div>
+      <div class="box-grid">` +
+        rooms.map(r=>`<button class="nav-btn" data-room="${r}" style="background:${color}">${r}</button>`).join('') +
+        `<button class="nav-btn ghost" id="manualRoom">Diğer / Farklı Konum</button>
+      </div>`;
+    document.getElementById('backFloors').addEventListener('click', ()=>{ activeRoomState.floor = null; renderRoomArea(); });
+    document.getElementById('manualRoom').addEventListener('click', manualRoomEntry);
+    area.querySelectorAll('[data-room]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const roomVal = btn.getAttribute('data-room');
+        const finalRoom = floorPrefix(floor) + roomVal;
+        logEntry(buildingId, label, finalRoom, color);
+        closeRoomArea();
+      });
+    });
+  }
 }
 
 /* ---------- Kayıt işlemleri ---------- */
 async function logEntry(num, label, room, color){
   const now = new Date();
-  entries.push({ id: now.getTime().toString(36)+Math.random().toString(36).slice(2,6), num, label, room: room||'', color: color||'#5a6472', ts: now.getTime() });
-  const key = num+'|'+(room||'');
+  entries.push({ id: now.getTime().toString(36)+Math.random().toString(36).slice(2,6), num, label, room: room||'', note:'', color: color||'#5a6472', ts: now.getTime() });
+  const key = (num||'x')+'|'+label+'|'+(room||'');
   recentEntries = [{num,label,room:room||'',color:color||'#5a6472',key}, ...recentEntries.filter(r=> r.key!==key)].slice(0, RECENT_MAX);
   await saveEntries(); await saveProfile();
   renderRecent(); renderLog();
   showToast(label + (room? ' — '+room:'') + ' — ' + fmtTime(now));
   if(navigator.vibrate) navigator.vibrate(15);
-  sendToServer({ num, label, room: room||'', ts: now.getTime() });
+  sendToServer({ num, label, room: room||'', note:'', ts: now.getTime() });
 }
 
-// Sunucuya gönderme — arka planda, sessizce dener. Başarısız olsa bile
-// kayıt zaten yukarıda telefonda (localStorage) saklandı, veri kaybolmaz.
 function sendToServer(entry){
   if(!SERVER_URL) return;
   fetch(SERVER_URL.replace(/\/$/,'') + '/log', {
@@ -451,17 +794,12 @@ function sendToServer(entry){
     body: JSON.stringify({
       participant_name: participantName,
       first_measurement_time: firstMeasurementTime,
-      ts: entry.ts,
-      num: entry.num,
-      label: entry.label,
-      room: entry.room
+      ts: entry.ts, num: entry.num, label: entry.label, room: entry.room, note: entry.note || ''
     })
-  }).then(res=>{
-    if(!res.ok) throw new Error('sunucu hatası');
-  }).catch(()=>{
-    showToast('⚠️ Sunucuya ulaşılamadı, kayıt telefonda saklı');
-  });
+  }).then(res=>{ if(!res.ok) throw new Error('sunucu hatası'); })
+    .catch(()=>{ showToast('⚠️ Sunucuya ulaşılamadı, kayıt telefonda saklı'); });
 }
+
 function renderRecent(){
   const row = document.getElementById('recentRow');
   if(recentEntries.length === 0){ row.innerHTML = '<span class="recent-empty">Henüz kayıt yok</span>'; return; }
@@ -507,10 +845,12 @@ function renderLog(){
   log.innerHTML = sorted.map(e=>{
     const d = new Date(e.ts);
     const label = e.label + (e.room? ' — '+e.room : '');
+    const noteHtml = e.note ? `<span class="log-note">📝 ${escapeHtml(e.note)}</span>` : '';
     return `<div class="log-row">
-      <span class="dot" style="background:${e.color}"></span>
+      <span class="dot" style="background:${e.color}; margin-top:4px;"></span>
       <span class="log-time">${fmtTime(d)}</span>
-      <span class="log-cat">${label}</span>
+      <span class="log-cat">${label}${noteHtml}</span>
+      <button class="log-note-btn" data-note-id="${e.id}" title="Not ekle/düzenle">${e.note ? '📝' : '📝'}</button>
       <button class="log-del" data-id="${e.id}" title="Sil">✕</button>
     </div>`;
   }).join('');
@@ -520,6 +860,22 @@ function renderLog(){
       await saveEntries(); renderLog(); showToast('Kayıt silindi');
     });
   });
+  log.querySelectorAll('.log-note-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.getAttribute('data-note-id');
+      const e = entries.find(x=> x.id===id);
+      if(!e) return;
+      showInputModal('Not', e.note || '', async (val)=>{
+        e.note = val.trim();
+        await saveEntries(); renderLog();
+        showToast(e.note ? 'Not kaydedildi' : 'Not silindi');
+      });
+    });
+  });
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 document.getElementById('pname').addEventListener('input', async (ev)=>{
@@ -536,10 +892,10 @@ document.getElementById('undoBtn').addEventListener('click', async ()=>{
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   if(entries.length===0){ showToast('Aktarılacak kayıt yok'); return; }
   const sorted = [...entries].sort((a,b)=>a.ts-b.ts);
-  const rows = [['ad_soyad','ilk_olcum_saati','tarih','saat','unix_ts_ms','bina_no','bina_adi','oda']];
+  const rows = [['ad_soyad','ilk_olcum_saati','tarih','saat','unix_ts_ms','bina_no','bina_adi','oda','not']];
   sorted.forEach(e=>{
     const d = new Date(e.ts);
-    rows.push([participantName||'bilinmiyor', firstMeasurementTime||'', fmtDate(d), fmtTime(d), e.ts, e.num, e.label, e.room||'']);
+    rows.push([participantName||'bilinmiyor', firstMeasurementTime||'', fmtDate(d), fmtTime(d), e.ts, e.num||'', e.label, e.room||'', e.note||'']);
   });
   const csv = rows.map(r=> r.map(c=> `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});

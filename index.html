@@ -17,9 +17,6 @@
   html,body{margin:0;padding:0;background:transparent;}
   body{ font-family:'Space Grotesk', system-ui, sans-serif; color:var(--ink); -webkit-tap-highlight-color: transparent; }
   .app{ max-width:520px; margin:0 auto; padding:18px 16px 40px; }
-  .strip{ display:flex; gap:3px; height:6px; margin-bottom:14px; border-radius:3px; overflow:hidden; }
-  .strip span{flex:1; background:var(--line);}
-  .strip span.on{background:linear-gradient(90deg,#2f7dc4,#7d5bc2,#d98a2b,#3fa142,#5a6472);}
   header{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
   h1{ font-size:18px; font-weight:700; letter-spacing:-0.01em; margin:0; }
   .clock{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--muted); }
@@ -130,18 +127,82 @@
     font-size:14px; cursor:pointer; min-height:56px; -webkit-user-select:none; user-select:none;
   }
   .nav-btn:active{transform:scale(0.96);}
+
+  /* ---------- Son kayıt çubuğu ---------- */
+  .last-bar{
+    display:flex; align-items:center; gap:10px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 12px; margin-bottom:14px; transition:background .3s ease, border-color .3s ease;
+  }
+  .last-info{ flex:1; min-width:0; }
+  .last-label{ font-size:11px; color:var(--muted); margin-bottom:2px; }
+  .last-text{ font-size:13px; font-weight:600; color:var(--ink); word-break:break-word; }
+  .last-ago{ font-family:'JetBrains Mono', monospace; font-weight:500; color:#1f9e8b; white-space:nowrap; }
+  .last-bar.stale{ background:#fff4e5; border-color:#f0a54a; }
+  .last-bar.stale .last-ago{ color:#c46a00; }
+  .still-btn{
+    flex-shrink:0; border:none; border-radius:10px; padding:10px 12px; cursor:pointer;
+    background:var(--ink); color:#fff; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12.5px;
+  }
+  .still-btn:active{ transform:scale(0.96); }
+
+  /* ---------- Giriş / İçerde / Çıkış pop-up'ı ---------- */
+  .status-sub{ font-size:12px; color:var(--muted); margin:-4px 0 12px; font-family:'JetBrains Mono', monospace; word-break:break-word; }
+  .status-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+  .status-btn{
+    border:none; border-radius:11px; padding:14px 8px; color:#fff; cursor:pointer;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14.5px;
+    display:flex; flex-direction:row; align-items:center; justify-content:center; gap:8px;
+  }
+  .status-btn span{ font-size:17px; line-height:1; }
+  .status-btn:active{ transform:scale(0.96); }
+  /* ---------- Toplu Taşıma kutusu (haritanın sağında, ortada) ---------- */
+  .map-wrap{ position:relative; margin-bottom:10px; }
+  .map-wrap #map{ margin-bottom:0; }
+  .transit-box{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%); z-index:1001;
+    width:84px; background:rgba(255,255,255,0.95); border:1px solid var(--line); border-radius:11px;
+    padding:6px; box-shadow:0 2px 10px rgba(28,36,48,0.18); display:flex; flex-direction:column; gap:5px;
+  }
+  .transit-btn{
+    border:none; border-radius:8px; padding:7px 4px; color:#fff; cursor:pointer;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:11px;
+    display:flex; flex-direction:column; align-items:center; gap:1px; line-height:1.1;
+  }
+  .transit-btn span{ font-size:16px; }
+  .transit-btn:active{ transform:scale(0.95); }
+  .choice-list{ display:flex; flex-direction:column; gap:8px; }
+  .choice-btn{
+    border:none; border-radius:11px; padding:13px 14px; color:#fff; cursor:pointer; text-align:left;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14px; display:flex; align-items:center; gap:10px;
+  }
+  .choice-btn span{ font-size:19px; }
+  .choice-btn:active{ transform:scale(0.97); }
+  .status-group{ background:var(--bg); border-radius:14px; padding:10px; }
+  .status-group + .status-group{ margin-top:8px; }
+  .status-group-title{ font-size:12px; font-weight:600; color:var(--muted); margin:0 2px 8px; }
+  .status-btn.state{ background:#fff !important; border:2px solid var(--c); color:var(--c); }
+  .status-badge.state{ background:transparent !important; border:1.5px solid var(--c); color:var(--c); padding:0 6px; }
+  .status-badge{ display:inline-block; font-size:10.5px; font-weight:700; color:#fff; padding:1px 7px; border-radius:8px; margin-right:6px; vertical-align:1px; }
 </style>
 </head>
 <body>
 <div class="app">
 
-  <div class="strip"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span><span></span></div>
 
   <header>
     <h1>Saha Günlüğü</h1>
     <div class="clock" id="clock">--:--:-- · --.--.----</div>
   </header>
   <p class="sub">GTÜ Kampüsü — bölge seçin, sonra bina/yol/alanlara dokunun.</p>
+
+  <div class="last-bar" id="lastBar" style="display:none">
+    <div class="last-info">
+      <div class="last-label">Son kayıt</div>
+      <div class="last-text" id="lastText"></div>
+    </div>
+    <button class="still-btn" id="stillBtn">Hâlâ buradayım</button>
+  </div>
 
   <div class="id-row">
     <label for="pname">Ad Soyad</label>
@@ -160,7 +221,13 @@
 
   <div class="section-label">Harita</div>
   <div class="breadcrumb" id="mapBreadcrumb"></div>
-  <div id="map"></div>
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="transit-box" id="transitBox">
+      <button class="transit-btn" id="transitBtn" style="background:#b83280"><span>🚉</span>Toplu Taşıma</button>
+      <button class="transit-btn" id="otherBtn" style="background:#5a6472"><span>✏️</span>Diğer</button>
+    </div>
+  </div>
   <div class="map-legend" id="mapLegend"></div>
 
   <div id="roomArea"></div>
@@ -227,7 +294,7 @@ const NW_BOUNDARY = {"type":"FeatureCollection","features":[{"type":"Feature","p
 /* ======================================================================
    GÜNEY - DOĞU
    ====================================================================== */
-const SE_BUILDINGS = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"id":14,"name":"Kimya ve Çevre Mühendisliği Bölümü"},"geometry":{"type":"Polygon","coordinates":[[[29.36273805,40.80533727],[29.36206201,40.80545725],[29.3621604,40.8057387],[29.3621398,40.8057424],[29.3622011,40.8059352],[29.3622259,40.8059307],[29.3623306,40.80624966],[29.3629972,40.80612776],[29.3628946,40.805817],[29.3629064,40.8058149],[29.3628743,40.8057144],[29.3628413,40.8056109],[29.3628273,40.8056134],[29.36273805,40.80533727]],[[29.3623165,40.8057183],[29.3626562,40.8056544],[29.3626587,40.8056621],[29.3626495,40.8056638],[29.3627009,40.8058223],[29.3627103,40.8058205],[29.3627158,40.8058372],[29.3623764,40.805901],[29.3623706,40.8058848],[29.3623197,40.805726],[29.3623165,40.8057183]]]}},{"type":"Feature","properties":{"id":2,"name":"Temel Bilimler Fakültesi"},"geometry":{"type":"Polygon","coordinates":[[[29.35950737,40.80578418],[29.36006876,40.80568321],[29.35991516,40.80522579],[29.3596317,40.8052764],[29.35934742,40.80532059],[29.35950737,40.80578418]]]}},{"type":"Feature","properties":{"id":16,"name":"Harita ve Endüstri Mühendisliği Bölümü"},"geometry":{"type":"Polygon","coordinates":[[[29.3619523,40.8070365],[29.3622447,40.8069832],[29.3620858,40.8064744],[29.3617927,40.8065253],[29.3619523,40.8070365]]]}},{"type":"Feature","properties":{"id":17,"name":"Biyomühendislik Bölümü"},"geometry":{"type":"Polygon","coordinates":[[[29.362576,40.8070664],[29.363257,40.806938],[29.3632228,40.8068341],[29.3631844,40.8067173],[29.3625034,40.8068457],[29.362576,40.8070664]]]}},{"type":"Feature","properties":{"id":1,"name":"Yer ve Deniz Bilimleri Enstitüsü"},"geometry":{"type":"Polygon","coordinates":[[[29.3619374,40.8050487],[29.36205,40.8050279],[29.3620074,40.8048956],[29.3620483,40.8048881],[29.3620405,40.8048638],[29.3622603,40.8048232],[29.362244,40.8047725],[29.362228,40.8047227],[29.3620134,40.8047623],[29.3620057,40.8047386],[29.3619619,40.8047467],[29.3619277,40.8046405],[29.3619189,40.8046132],[29.3618012,40.804635],[29.3618451,40.8047713],[29.361809,40.804778],[29.3618531,40.8049148],[29.3618919,40.8049077],[29.3619374,40.8050487]]]}},{"type":"Feature","properties":{"id":7,"name":"Merkezi Araştırma Laboratuvarı"},"geometry":{"type":"Polygon","coordinates":[[[29.35962785,40.80520959],[29.36017351,40.80510307],[29.36010518,40.80486893],[29.35955783,40.80496578],[29.35962785,40.80520959]]]}},{"type":"Feature","properties":{"id":4,"name":"SUMER"},"geometry":{"type":"Polygon","coordinates":[[[29.36084317,40.80628605],[29.36110011,40.80624633],[29.3610284,40.8059997],[29.3607731,40.8060488],[29.36084317,40.80628605]]]}},{"type":"Feature","properties":{"id":18,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.3614381,40.8041862],[29.3615726,40.8042289],[29.3618346,40.8041832],[29.3618027,40.8040785],[29.3616218,40.80411],[29.361699,40.803971],[29.3615787,40.8039327],[29.3614381,40.8041862]]]}},{"type":"Feature","properties":{"id":6,"name":"Sera"},"geometry":{"type":"Polygon","coordinates":[[[29.36268813,40.8064142],[29.36274416,40.80657072],[29.36311647,40.80649585],[29.36306698,40.80634587],[29.36268813,40.8064142]]]}},{"type":"Feature","properties":{"id":8,"name":"KYK Nilüfer Hatun Kız Yurdu"},"geometry":{"type":"Polygon","coordinates":[[[29.3639824,40.8067734],[29.3647738,40.8066605],[29.3645968,40.8059495],[29.36435,40.8059847],[29.364482,40.8065151],[29.3639374,40.8065927],[29.3639824,40.8067734]]]}},{"type":"Feature","properties":{"id":9,"name":"KYK Nilüfer Hatun Kız Yurdu"},"geometry":{"type":"Polygon","coordinates":[[[29.364294,40.8057469],[29.3645341,40.8057139],[29.3643665,40.8050144],[29.3635646,40.8051246],[29.3636071,40.805302],[29.364169,40.8052249],[29.364294,40.8057469]]]}},{"type":"Feature","properties":{"id":10,"name":"KYK Nilüfer Hatun Kız Yurdu"},"geometry":{"type":"Polygon","coordinates":[[[29.36384826,40.80639417],[29.36419611,40.8063485],[29.36395858,40.80545703],[29.36361062,40.8055027],[29.36384826,40.80639417]]]}},{"type":"Feature","properties":{"id":5,"name":"Sosyal Alan-1"},"geometry":{"type":"Polygon","coordinates":[[[29.359404,40.8059923],[29.3595798,40.80659484],[29.359833,40.80655134],[29.3596573,40.8059488],[29.359404,40.8059923]]]}},{"type":"Feature","properties":{"id":11,"name":"Kuzey-Girişi"},"geometry":{"type":"Polygon","coordinates":[[[29.36355319,40.8075421],[29.36372503,40.80750894],[29.36368584,40.80736323],[29.36393229,40.80732178],[29.36353134,40.80708965],[29.36341452,40.80711402],[29.36355319,40.8075421]]]}},{"type":"Feature","properties":{"id":3,"name":"TeknoPark"},"geometry":{"type":"Polygon","coordinates":[[[29.35995882,40.80393726],[29.36032634,40.80386667],[29.36017823,40.80350958],[29.3598162,40.80357602],[29.35995882,40.80393726]]]}},{"type":"Feature","properties":{"id":15,"name":"Kapalı Yüzme Salonu"},"geometry":{"type":"Polygon","coordinates":[[[29.35898242,40.80416217],[29.35949987,40.80405144],[29.35942948,40.80385145],[29.35949713,40.80383692],[29.35942125,40.80364384],[29.35878128,40.80377879],[29.35884711,40.8039428],[29.35889465,40.80393242],[29.35898242,40.80416217]]]}}]};
+const SE_BUILDINGS = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"id":14,"name":"Kimya ve Çevre Mühendisliği Bölümü"},"geometry":{"type":"Polygon","coordinates":[[[29.36273805,40.80533727],[29.36206201,40.80545725],[29.3621604,40.8057387],[29.3621398,40.8057424],[29.3622011,40.8059352],[29.3622259,40.8059307],[29.3623306,40.80624966],[29.3629972,40.80612776],[29.3628946,40.805817],[29.3629064,40.8058149],[29.3628743,40.8057144],[29.3628413,40.8056109],[29.3628273,40.8056134],[29.36273805,40.80533727]],[[29.3623165,40.8057183],[29.3626562,40.8056544],[29.3626587,40.8056621],[29.3626495,40.8056638],[29.3627009,40.8058223],[29.3627103,40.8058205],[29.3627158,40.8058372],[29.3623764,40.805901],[29.3623706,40.8058848],[29.3623197,40.805726],[29.3623165,40.8057183]]]}},{"type":"Feature","properties":{"id":2,"name":"Temel Bilimler Fakültesi"},"geometry":{"type":"Polygon","coordinates":[[[29.35950737,40.80578418],[29.36006876,40.80568321],[29.35991516,40.80522579],[29.3596317,40.8052764],[29.35934742,40.80532059],[29.35950737,40.80578418]]]}},{"type":"Feature","properties":{"id":16,"name":"Harita ve Endüstri Mühendisliği Bölümü"},"geometry":{"type":"Polygon","coordinates":[[[29.3619523,40.8070365],[29.3622447,40.8069832],[29.3620858,40.8064744],[29.3617927,40.8065253],[29.3619523,40.8070365]]]}},{"type":"Feature","properties":{"id":17,"name":"Biyomühendislik Bölümü"},"geometry":{"type":"Polygon","coordinates":[[[29.362576,40.8070664],[29.363257,40.806938],[29.3632228,40.8068341],[29.3631844,40.8067173],[29.3625034,40.8068457],[29.362576,40.8070664]]]}},{"type":"Feature","properties":{"id":1,"name":"Yer ve Deniz Bilimleri Enstitüsü"},"geometry":{"type":"Polygon","coordinates":[[[29.3619374,40.8050487],[29.36205,40.8050279],[29.3620074,40.8048956],[29.3620483,40.8048881],[29.3620405,40.8048638],[29.3622603,40.8048232],[29.362244,40.8047725],[29.362228,40.8047227],[29.3620134,40.8047623],[29.3620057,40.8047386],[29.3619619,40.8047467],[29.3619277,40.8046405],[29.3619189,40.8046132],[29.3618012,40.804635],[29.3618451,40.8047713],[29.361809,40.804778],[29.3618531,40.8049148],[29.3618919,40.8049077],[29.3619374,40.8050487]]]}},{"type":"Feature","properties":{"id":7,"name":"Merkezi Araştırma Laboratuvarı"},"geometry":{"type":"Polygon","coordinates":[[[29.35962785,40.80520959],[29.36017351,40.80510307],[29.36010518,40.80486893],[29.35955783,40.80496578],[29.35962785,40.80520959]]]}},{"type":"Feature","properties":{"id":4,"name":"SUMER"},"geometry":{"type":"Polygon","coordinates":[[[29.36084317,40.80628605],[29.36110011,40.80624633],[29.3610284,40.8059997],[29.3607731,40.8060488],[29.36084317,40.80628605]]]}},{"type":"Feature","properties":{"id":18,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.3614381,40.8041862],[29.3615726,40.8042289],[29.3618346,40.8041832],[29.3618027,40.8040785],[29.3616218,40.80411],[29.361699,40.803971],[29.3615787,40.8039327],[29.3614381,40.8041862]]]}},{"type":"Feature","properties":{"id":6,"name":"Sera"},"geometry":{"type":"Polygon","coordinates":[[[29.36268813,40.8064142],[29.36274416,40.80657072],[29.36311647,40.80649585],[29.36306698,40.80634587],[29.36268813,40.8064142]]]}},{"type":"Feature","properties":{"id":8,"name":"KYK Nilüfer Hatun Kız Yurdu"},"geometry":{"type":"Polygon","coordinates":[[[29.3639824,40.8067734],[29.3647738,40.8066605],[29.3645968,40.8059495],[29.36435,40.8059847],[29.364482,40.8065151],[29.3639374,40.8065927],[29.3639824,40.8067734]]]}},{"type":"Feature","properties":{"id":9,"name":"KYK Nilüfer Hatun Kız Yurdu"},"geometry":{"type":"Polygon","coordinates":[[[29.364294,40.8057469],[29.3645341,40.8057139],[29.3643665,40.8050144],[29.3635646,40.8051246],[29.3636071,40.805302],[29.364169,40.8052249],[29.364294,40.8057469]]]}},{"type":"Feature","properties":{"id":10,"name":"KYK Nilüfer Hatun Kız Yurdu"},"geometry":{"type":"Polygon","coordinates":[[[29.36384826,40.80639417],[29.36419611,40.8063485],[29.36395858,40.80545703],[29.36361062,40.8055027],[29.36384826,40.80639417]]]}},{"type":"Feature","properties":{"id":5,"name":"BİM"},"geometry":{"type":"Polygon","coordinates":[[[29.359404,40.8059923],[29.3594919,40.80629357],[29.35974515,40.80625007],[29.3596573,40.8059488],[29.359404,40.8059923]]]}},{"type":"Feature","properties":{"id":19,"name":"Güzide Kafe"},"geometry":{"type":"Polygon","coordinates":[[[29.3594919,40.80629357],[29.3595798,40.80659484],[29.359833,40.80655134],[29.35974515,40.80625007],[29.3594919,40.80629357]]]}},{"type":"Feature","properties":{"id":11,"name":"Kuzey-Girişi"},"geometry":{"type":"Polygon","coordinates":[[[29.36355319,40.8075421],[29.36372503,40.80750894],[29.36368584,40.80736323],[29.36393229,40.80732178],[29.36353134,40.80708965],[29.36341452,40.80711402],[29.36355319,40.8075421]]]}},{"type":"Feature","properties":{"id":3,"name":"TeknoPark"},"geometry":{"type":"Polygon","coordinates":[[[29.35995882,40.80393726],[29.36032634,40.80386667],[29.36017823,40.80350958],[29.3598162,40.80357602],[29.35995882,40.80393726]]]}},{"type":"Feature","properties":{"id":15,"name":"Kapalı Yüzme Salonu"},"geometry":{"type":"Polygon","coordinates":[[[29.35898242,40.80416217],[29.35949987,40.80405144],[29.35942948,40.80385145],[29.35949713,40.80383692],[29.35942125,40.80364384],[29.35878128,40.80377879],[29.35884711,40.8039428],[29.35889465,40.80393242],[29.35898242,40.80416217]]]}}]};
 const SE_PARKING = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"id":0,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36225468,40.8053184],[29.36269583,40.80524002],[29.36268276,40.80519379],[29.3629561,40.80514656],[29.36288274,40.80491342],[29.36273904,40.80482499],[29.3625672,40.80485765],[29.36255313,40.8048049],[29.36213108,40.8048873],[29.36225468,40.8053184]]]}},{"type":"Feature","properties":{"id":1,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.35924954,40.80527117],[29.3595706,40.8052154],[29.35952237,40.80502798],[29.35920432,40.80508727],[29.35924954,40.80527117]]]}},{"type":"Feature","properties":{"id":2,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36183262,40.80760755],[29.36337614,40.80732216],[29.36333997,40.80716539],[29.36179645,40.80746887],[29.36183262,40.80760755]]]}},{"type":"Feature","properties":{"id":3,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36000478,40.80408125],[29.3603585,40.80401693],[29.3603163,40.80387826],[29.35995655,40.80395463],[29.36000478,40.80408125]]]}},{"type":"Feature","properties":{"id":4,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.35887126,40.80369738],[29.35927925,40.80361497],[29.35924106,40.80350645],[29.35883709,40.80358483],[29.35887126,40.80369738]]]}},{"type":"Feature","properties":{"id":5,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36400535,40.80729644],[29.36521499,40.80708014],[29.36516073,40.80688267],[29.3650522,40.80689473],[29.36504014,40.80685705],[29.36386818,40.80707184],[29.36382748,40.80713214],[29.36384708,40.80720751],[29.36400535,40.80729644]]]}}]};
 const SE_GARDENS = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"id":17,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.35977122,40.80784229],[29.35987824,40.80822063],[29.36353807,40.80753479],[29.36340166,40.80711575],[29.36334099,40.80712743],[29.36340769,40.80733205],[29.36181292,40.8076403],[29.36175036,40.8074353],[29.35977122,40.80784229]]]}},{"type":"Feature","properties":{"id":1,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.3632814,40.80608183],[29.36304473,40.80527102],[29.36277292,40.80532414],[29.36302113,40.80613007],[29.3632814,40.80608183]]]}},{"type":"Feature","properties":{"id":2,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36218405,40.80629952],[29.36228957,40.80628018],[29.36203483,40.80544536],[29.36192868,40.80546533],[29.36218405,40.80629952]]]}},{"type":"Feature","properties":{"id":3,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36201071,40.80726409],[29.3625845,40.80715858],[29.36248502,40.806834],[29.36223983,40.80688173],[29.36227173,40.8069885],[29.36194609,40.80705608],[29.36201071,40.80726409]]]}},{"type":"Feature","properties":{"id":4,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36232135,40.80665337],[29.36272732,40.80657197],[29.36266741,40.80640541],[29.36308306,40.80633281],[29.36313431,40.80649259],[29.36339382,40.80644159],[29.36330715,40.806168],[29.3622304,40.80637552],[29.36232135,40.80665337]]]}},{"type":"Feature","properties":{"id":5,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36260435,40.80715908],[29.36337297,40.80702041],[29.36342975,40.80698272],[29.36343578,40.80697745],[29.36345286,40.80696313],[29.3634707,40.80694579],[29.36347823,40.80693499],[29.36349883,40.80690635],[29.36350474,40.80688324],[29.36350863,40.80684154],[29.36350045,40.80680269],[29.36340362,40.80646696],[29.3623324,40.80668251],[29.36238013,40.8068443],[29.36319309,40.80668854],[29.36327449,40.80695082],[29.36257998,40.80707919],[29.36260435,40.80715908]]]}},{"type":"Feature","properties":{"id":6,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36082848,40.80652867],[29.36208879,40.80630783],[29.36183551,40.80548295],[29.36061431,40.80570729],[29.36070184,40.80603497],[29.36106246,40.80597984],[29.36113884,40.80624915],[29.36092982,40.80628357],[29.36077406,40.80630969],[29.36082848,40.80652867]]]}},{"type":"Feature","properties":{"id":7,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.35988664,40.80669448],[29.36072382,40.80654434],[29.36050312,40.80572887],[29.35964996,40.80588412],[29.35988664,40.80669448]]]}},{"type":"Feature","properties":{"id":8,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36199174,40.80726585],[29.36175107,40.80645741],[29.3598066,40.80679757],[29.3613476,40.80738795],[29.36199174,40.80726585]]]}},{"type":"Feature","properties":{"id":9,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36117275,40.80742061],[29.35965385,40.80682772],[29.35960009,40.80683726],[29.35984713,40.80760446],[29.35994703,40.80765173],[29.36117275,40.80742061]]]}},{"type":"Feature","properties":{"id":10,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36012352,40.80572258],[29.36180499,40.80541524],[29.36161754,40.80482773],[29.35995302,40.80516135],[29.36012352,40.80572258]]]}},{"type":"Feature","properties":{"id":11,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.3590734,40.80503926],[29.36012352,40.80484431],[29.36019687,40.80509352],[29.36161151,40.80481466],[29.36148009,40.80439728],[29.36057719,40.80412144],[29.3588885,40.80444637],[29.3590734,40.80503926]]]}},{"type":"Feature","properties":{"id":12,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36238001,40.80589291],[29.36269605,40.80583564],[29.36264329,40.80566179],[29.36232599,40.80572208],[29.36238001,40.80589291]]]}},{"type":"Feature","properties":{"id":13,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36364241,40.80679933],[29.36391574,40.80675913],[29.36349971,40.80515834],[29.36320025,40.80520758],[29.36364241,40.80679933]]]}},{"type":"Feature","properties":{"id":15,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36190899,40.80539628],[29.36224086,40.80533523],[29.36209729,40.80485998],[29.36204993,40.80486883],[29.36205803,40.80489351],[29.36202048,40.80490023],[29.36206369,40.8050359],[29.36193305,40.80506001],[29.36188733,40.80491606],[29.36184864,40.8049246],[29.3617994,40.80477412],[29.36183557,40.80476734],[29.36179035,40.80462791],[29.36192401,40.80460178],[29.36196747,40.80473895],[29.36200892,40.80473217],[29.36201646,40.80475628],[29.36206343,40.80474724],[29.36200842,40.80456259],[29.36160018,40.80442944],[29.36190899,40.80539628]]]}},{"type":"Feature","properties":{"id":16,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.35928842,40.80586946],[29.35949342,40.80583529],[29.35931555,40.80528461],[29.35911357,40.8053238],[29.35928842,40.80586946]]]}},{"type":"Feature","properties":{"id":19,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36139557,40.8041817],[29.36135638,40.80416889],[29.36132096,40.80422466],[29.36196045,40.80444511],[29.36198909,40.80439951],[29.36184476,40.80434751],[29.36190769,40.80425707],[29.36211005,40.8043445],[29.3623062,40.80404548],[29.36147829,40.80376511],[29.36145832,40.80380204],[29.36219314,40.80405377],[29.36212343,40.80415853],[29.36216413,40.80417436],[29.36213436,40.80421618],[29.36188263,40.80410916],[29.36184193,40.80405414],[29.36180764,40.8040647],[29.36184721,40.80418754],[29.36157626,40.80423955],[29.36139557,40.8041817]]]}},{"type":"Feature","properties":{"id":18,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.3622361,40.80417398],[29.36327089,40.80451501],[29.36324226,40.80455873],[29.36396126,40.80478445],[29.36400196,40.8048926],[29.36310056,40.80507311],[29.36312996,40.80517862],[29.3644421,40.80499171],[29.36437653,40.8047935],[29.36424087,40.80470758],[29.36231449,40.80404887],[29.3622361,40.80417398]]]}},{"type":"Feature","properties":{"id":20,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36357915,40.80702549],[29.3636564,40.80709219],[29.36372423,40.80709408],[29.36500283,40.80683595],[29.36491917,40.80665205],[29.36478389,40.80667165],[29.3636466,40.8068367],[29.36364585,40.8069181],[29.36362135,40.80695465],[29.36357915,40.80702549]]]}},{"type":"Feature","properties":{"id":21,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36124691,40.80413856],[29.36043897,40.80387552],[29.36058933,40.80361852],[29.36126085,40.80385593],[29.36113725,40.8040662],[29.36126839,40.80410766],[29.36147188,40.80375871],[29.36013788,40.80331102],[29.36019742,40.80349417],[29.36038584,40.80400666],[29.36060064,40.80398179],[29.36121789,40.80418754],[29.36124691,40.80413856]]]}},{"type":"Feature","properties":{"id":22,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.35840858,40.80306533],[29.35858833,40.80364528],[29.35880068,40.80361023],[29.35878994,40.80355974],[29.35925609,40.80348135],[29.36014278,40.80337961],[29.36011791,40.80330273],[29.35908312,40.802947],[29.35829026,40.80291535],[29.35832869,40.80307286],[29.35840858,40.80306533]]]}},{"type":"Feature","properties":{"id":23,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.35898213,40.80369615],[29.3586068,40.8037685],[29.35876356,40.8042599],[29.35884797,40.80429004],[29.35998451,40.80408806],[29.35996341,40.8040338],[29.35983754,40.80406093],[29.35975841,40.80381749],[29.35987749,40.8037979],[29.35980664,40.80356426],[29.36018574,40.80349869],[29.36015258,40.80339242],[29.35926475,40.80349944],[29.35930093,40.80360043],[29.35935746,40.8035929],[29.35936575,40.80363284],[29.35942529,40.8036238],[29.35951121,40.80384086],[29.35944865,40.80385593],[29.35952025,40.80405678],[29.35897534,40.80417511],[29.35889131,40.80394712],[29.35884458,40.80395805],[29.35876846,40.80377114],[29.35899117,40.8037278],[29.35898213,40.80369615]]]}}]};
 const SE_ROADS = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"id":1,"name":"Giriş-1"},"geometry":{"type":"Polygon","coordinates":[[[29.36355447,40.80690961],[29.36363999,40.80689897],[29.36313013,40.80520371],[29.36304622,40.80521879],[29.36355447,40.80690961]]]}},{"type":"Feature","properties":{"id":2,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36346526,40.80707181],[29.36344416,40.80702358],[29.35984524,40.80768766],[29.35984524,40.80773682],[29.36346526,40.80707181]]]}},{"type":"Feature","properties":{"id":3,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36133253,40.80739146],[29.35979605,40.80680109],[29.35966371,40.80682539],[29.36118883,40.80742111],[29.36133253,40.80739146]]]}},{"type":"Feature","properties":{"id":4,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36210193,40.80630533],[29.36217014,40.80629415],[29.36191751,40.80546634],[29.36184883,40.80547843],[29.36210193,40.80630533]]]}},{"type":"Feature","properties":{"id":5,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36302377,40.80520004],[29.35927174,40.80589065],[29.35928682,40.80594291],[29.36304085,40.80525631],[29.36302377,40.80520004]]]}},{"type":"Feature","properties":{"id":6,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36190007,40.80539883],[29.36158259,40.80442542],[29.36150198,40.80440165],[29.3618243,40.80541207],[29.36190007,40.80539883]]]}},{"type":"Feature","properties":{"id":7,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.3595977,40.80682948],[29.36330552,40.80616009],[29.36328994,40.80610231],[29.35958339,40.80676755],[29.3595977,40.80682948]]]}},{"type":"Feature","properties":{"id":8,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36230726,40.80686699],[29.36236399,40.80685564],[29.36221483,40.80636672],[29.36215152,40.80637752],[29.36230726,40.80686699]]]}},{"type":"Feature","properties":{"id":9,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36339508,40.80644737],[29.36232486,40.80665915],[29.36233127,40.80667962],[29.3634001,40.80646319],[29.36339508,40.80644737]]]}},{"type":"Feature","properties":{"id":10,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36073777,40.80654553],[29.36081627,40.80652952],[29.36060577,40.80570779],[29.36051985,40.80572437],[29.36073777,40.80654553]]]}},{"type":"Feature","properties":{"id":11,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.3588548,40.80442567],[29.3605777,40.80409381],[29.36223603,40.80461861],[29.36292061,40.80485652],[29.36304019,40.80519618],[29.3631236,40.80518412],[29.36299799,40.80480125],[29.36058473,40.80399935],[29.35882441,40.80431413],[29.3588548,40.80442567]]]}},{"type":"Feature","properties":{"id":12,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.3640059,40.80730193],[29.3635547,40.80702358],[29.36351651,40.80706277],[29.36397274,40.80733108],[29.3640059,40.80730193]]]}},{"type":"Feature","properties":{"id":13,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.36123176,40.8042164],[29.36128502,40.80422997],[29.36149303,40.8038868],[29.36205979,40.80408175],[29.36208793,40.80404356],[29.36145886,40.80382851],[29.36123176,40.8042164]]]}},{"type":"Feature","properties":{"id":14,"name":""},"geometry":{"type":"Polygon","coordinates":[[[29.35898024,40.80414722],[29.35949613,40.80405151],[29.35942227,40.80384236],[29.35948596,40.80382691],[29.35941963,40.8036498],[29.35878429,40.80377868],[29.35885061,40.80394976],[29.3588996,40.80393846],[29.35898024,40.80414722]]]}}]};
@@ -270,7 +337,8 @@ const SE_BUILDING_STYLE = {
   "Yer ve Deniz Bilimleri Enstitüsü": { color:C.arastirma },
   "Temel Bilimler Fakültesi": { color:C.bolum },
   "SUMER": { color:C.arastirma },
-  "Sosyal Alan-1": { color:C.sosyal },
+  "BİM": { color:C.sosyal },
+  "Güzide Kafe": { color:C.sosyal },
   "Sera": { color:C.spor },
   "Merkezi Araştırma Laboratuvarı": { color:C.arastirma },
   "KYK Nilüfer Hatun Kız Yurdu": { color:C.sosyal },
@@ -394,7 +462,7 @@ function pad(n){ return n.toString().padStart(2,'0'); }
 function fmtTime(d){ return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }
 function fmtDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function fmtDateTr(d){ return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear(); }
-function tickClock(){ document.getElementById('clock').textContent = fmtTime(new Date()) + ' · ' + fmtDateTr(new Date()); }
+function tickClock(){ document.getElementById('clock').textContent = fmtTime(new Date()) + ' · ' + fmtDateTr(new Date()); renderLastBar(); }
 setInterval(tickClock, 1000); tickClock();
 
 function escapeHtml(s){
@@ -431,6 +499,50 @@ function showInputModal(title, defaultValue, onSave){
   document.getElementById('modalSave').addEventListener('click', ()=>{ const val = input.value; close(); onSave(val); });
 }
 
+/* ---------- Giriş / İçerde / Çıkış pop-up'ı ---------- */
+const STATUS_OPTIONS = [
+  // kind:'move'  → o an olan bir hareket (giriyor / çıkıyor)
+  // kind:'state' → süregelen bir durum (içeride / dışarıda duruyor)
+  { key:'Giriş',   color:'#1f9e8b', icon:'⬇', kind:'move' },
+  { key:'Çıkış',   color:'#c0392b', icon:'⬆', kind:'move' },
+  { key:'İçerde',  color:'#2f7dc4', icon:'●', kind:'state' },
+  { key:'Dışarda', color:'#3fa142', icon:'○', kind:'state' }
+];
+function statusColor(s){ const o = STATUS_OPTIONS.find(x=> x.key===s); return o ? o.color : NAMED_GRAY; }
+function statusKind(s){ const o = STATUS_OPTIONS.find(x=> x.key===s); return o ? o.kind : ''; }
+
+function statusButtons(kind){
+  return STATUS_OPTIONS.filter(o=> o.kind === kind).map(o=>
+    `<button class="status-btn ${kind === 'state' ? 'state' : ''}" data-status="${escapeHtml(o.key)}" style="background:${o.color}; --c:${o.color}"><span>${o.icon}</span>${escapeHtml(o.key)}</button>`
+  ).join('');
+}
+
+function showStatusModal(placeText, onPick){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-box">
+        <h3>Durum seçin</h3>
+        <div class="status-sub">${escapeHtml(placeText)}</div>
+        <div class="status-group">
+          <div class="status-group-title">Hareket</div>
+          <div class="status-grid">${statusButtons('move')}</div>
+        </div>
+        <div class="status-group">
+          <div class="status-group-title">Mevcut Durum</div>
+          <div class="status-grid">${statusButtons('state')}</div>
+        </div>
+        <div class="modal-actions"><button class="cancel" id="modalCancel">İptal</button></div>
+      </div>
+    </div>`;
+  function close(){ root.innerHTML = ''; }
+  document.getElementById('modalCancel').addEventListener('click', close);
+  document.getElementById('modalOverlay').addEventListener('click', (ev)=>{ if(ev.target.id === 'modalOverlay') close(); });
+  root.querySelectorAll('[data-status]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ const s = btn.getAttribute('data-status'); close(); onPick(s); });
+  });
+}
+
 /* ---------- Harita ---------- */
 const map = L.map('map', { zoomControl:true, attributionControl:false, zoomSnap:0.1 }).setView([40.80953, 29.35974], 15);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -447,7 +559,12 @@ function fitAndLock(bounds, padRatio){
   map.setMaxBounds(null);
   map.setMinZoom(1);
   map.setMaxZoom(22);
-  const padded = bounds.pad(padRatio);
+  let padded = bounds.pad(padRatio);
+  // Sağdaki Toplu Taşıma kutusu kampüsün üstüne binmesin diye doğuya boşluk ekle
+  const mapW = map.getSize().x || 400;
+  const f = navPath.length === 0 ? Math.min(0.45, 100 / mapW) : 0;
+  const extra = (padded.getEast() - padded.getWest()) * f / (1 - f);
+  padded = L.latLngBounds(padded.getSouthWest(), L.latLng(padded.getNorth(), padded.getEast() + extra));
   map.fitBounds(padded);
   map.setMaxBounds(padded);
   map.setMinZoom(map.getZoom());
@@ -471,6 +588,8 @@ function renderCurrent(){
   currentLayerGroup.clearLayers();
   currentLabelGroup.clearLayers();
   renderBreadcrumb();
+  // Toplu Taşıma / Diğer kutusu sadece en dış kampüs görünümünde
+  document.getElementById('transitBox').style.display = navPath.length === 0 ? '' : 'none';
   const target = navPath.length ? navPath[navPath.length-1] : null;
   if(target && target.data) renderDataLevel(target.data, target.id);
   else renderBoundaryLevel(currentChildren());
@@ -635,8 +754,7 @@ function manualRoomEntry(){
   showInputModal('Öğrencinin bulunduğu odayı / konumu yazın', '', (val)=>{
     const roomText = (val || '').trim();
     if(!roomText) return;
-    logEntry(label, floorPrefix(floor) + roomText + ' (manuel)', color);
-    closeRoomArea();
+    logEntry(label, floorPrefix(floor) + roomText + ' (manuel)', color, closeRoomArea);
   });
 }
 
@@ -673,27 +791,86 @@ function renderRoomArea(){
     document.getElementById('manualRoom').addEventListener('click', manualRoomEntry);
     area.querySelectorAll('[data-room]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        logEntry(label, floorPrefix(floor) + btn.getAttribute('data-room'), color);
-        closeRoomArea();
+        logEntry(label, floorPrefix(floor) + btn.getAttribute('data-room'), color, closeRoomArea);
       });
     });
   }
 }
 
 /* ---------- Kayıt işlemleri ---------- */
-async function logEntry(label, room, color){
+// Önce Giriş / İçerde / Çıkış sorulur, seçilince kayıt düşer.
+// onDone: kayıttan sonra çalışır (ör. oda panelini kapatmak).
+function logEntry(label, room, color, onDone, note){
+  showStatusModal(label + (room ? ' — ' + room : '') + (note ? ' · ' + note : ''), (status)=>{
+    commitEntry(label, room, color, status, note);
+    if(onDone) onDone();
+  });
+}
+
+async function commitEntry(label, room, color, status, note){
   const now = new Date();
-  const entry = { id: now.getTime().toString(36)+Math.random().toString(36).slice(2,6), label, room: room||'', note:'',
-                  color: color||NAMED_GRAY, ts: now.getTime(), participant: participantName, firstTime: firstMeasurementTime };
+  const entry = { id: now.getTime().toString(36)+Math.random().toString(36).slice(2,6), label, room: room||'', note: note||'',
+                  status: status||'', color: color||NAMED_GRAY, ts: now.getTime(),
+                  participant: participantName, firstTime: firstMeasurementTime };
   entries.push(entry);
   const key = label+'|'+(room||'');
   recentEntries = [{label, room:room||'', color:color||NAMED_GRAY, key}, ...recentEntries.filter(r=> r.key!==key)].slice(0, RECENT_MAX);
   await saveEntries(); await saveProfile();
   renderRecent(); renderLog();
-  showToast(label + (room? ' — '+room:'') + ' — ' + fmtTime(now));
+  showToast(label + (room? ' — '+room:'') + ' · ' + status + ' — ' + fmtTime(now));
   if(navigator.vibrate) navigator.vibrate(15);
   queueSync('upsert', entry);
 }
+
+/* ---------- Son kayıt çubuğu + Hâlâ buradayım ---------- */
+const STALE_MINUTES = 30; // bu kadar dakika kayıt girilmezse çubuk turuncuya döner
+
+function lastEntry(){
+  if(!entries.length) return null;
+  return entries.reduce((a,b)=> (b.ts > a.ts ? b : a));
+}
+
+function fmtAgo(ms){
+  const min = Math.floor(ms / 60000);
+  if(min < 1) return 'az önce';
+  if(min < 60) return min + ' dk önce';
+  const h = Math.floor(min / 60), m = min % 60;
+  return h + ' sa ' + (m ? m + ' dk ' : '') + 'önce';
+}
+
+// Son durumdan "hâlâ buradayım" için hangi durumun yazılacağı
+function stillStatus(st){
+  if(st === 'Dışarda') return 'Dışarda';
+  if(st === 'Çıkış') return null;   // çıkmış kişi için anlamsız
+  return 'İçerde';                   // Giriş, İçerde veya boş
+}
+
+function renderLastBar(){
+  const bar = document.getElementById('lastBar');
+  if(!bar) return;
+  const e = lastEntry();
+  if(!e){ bar.style.display = 'none'; return; }
+  bar.style.display = '';
+  const ago = Date.now() - e.ts;
+  const place = e.label + (e.room ? ' — ' + e.room : '') + (e.label === 'Diğer' && e.note ? ' (' + e.note + ')' : '');
+  const text = escapeHtml(place) + (e.status ? ' · ' + escapeHtml(e.status) : '') +
+               ' · <span class="last-ago">' + fmtAgo(ago) + '</span>';
+  const el = document.getElementById('lastText');
+  if(el.innerHTML !== text) el.innerHTML = text;
+  bar.classList.toggle('stale', ago >= STALE_MINUTES * 60000);
+  const btn = document.getElementById('stillBtn');
+  const st = stillStatus(e.status);
+  btn.style.display = st ? '' : 'none';
+  btn.textContent = st === 'Dışarda' ? 'Hâlâ dışarıdayım' : 'Hâlâ buradayım';
+}
+
+document.getElementById('stillBtn').addEventListener('click', ()=>{
+  const e = lastEntry();
+  if(!e) return;
+  const st = stillStatus(e.status);
+  if(!st) return;
+  commitEntry(e.label, e.room || null, e.color, st, e.label === 'Diğer' ? e.note : '');
+});
 
 /* ---------- Google E-Tablo'ya gönderim (kuyruklu) ---------- */
 function toPayload(action, e){
@@ -703,7 +880,8 @@ function toPayload(action, e){
     participant_name: e.participant || participantName || '',
     first_measurement_time: e.firstTime || firstMeasurementTime || '',
     date: fmtDate(d), time: fmtTime(d), ts: e.ts,
-    label: e.label, room: e.room || '', note: e.note || ''
+    label: e.label, room: e.room || '', note: e.note || '',
+    status: e.status || ''
   };
 }
 
@@ -763,7 +941,9 @@ function renderRecent(){
   row.querySelectorAll('.recent-chip').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const r = recentEntries[+btn.getAttribute('data-idx')];
-      if(r) logEntry(r.label, r.room||null, r.color);
+      if(!r) return;
+      if(r.label === 'Diğer') openOther();
+      else logEntry(r.label, r.room||null, r.color);
     });
   });
 }
@@ -793,6 +973,7 @@ function updateIdStatus(){
 
 /* ---------- Kayıt günlüğü ---------- */
 function renderLog(){
+  renderLastBar();
   const log = document.getElementById('log'); const count = document.getElementById('count');
   let status = '';
   if(!SHEET_URL) status = ' · ⚠️ SHEET_URL boş, tabloya gönderilmiyor';
@@ -820,10 +1001,11 @@ function renderLog(){
     const d = new Date(e.ts);
     const text = e.label + (e.room? ' — '+e.room : '');
     const noteHtml = e.note ? `<span class="log-note">📝 ${escapeHtml(e.note)}</span>` : '';
+    const badge = e.status ? `<span class="status-badge ${statusKind(e.status) === 'state' ? 'state' : ''}" style="background:${statusColor(e.status)}; --c:${statusColor(e.status)}">${escapeHtml(e.status)}</span>` : '';
     return `<div class="log-row">
       <span class="dot" style="background:${e.color}; margin-top:4px;"></span>
       <span class="log-time">${fmtTime(d)}</span>
-      <span class="log-cat">${escapeHtml(text)}${noteHtml}</span>
+      <span class="log-cat">${badge}${escapeHtml(text)}${noteHtml}</span>
       <button class="log-note-btn" data-note-id="${e.id}" title="Not ekle/düzenle">📝</button>
       <button class="log-del" data-id="${e.id}" title="Sil">✕</button>
     </div>`;
@@ -865,10 +1047,10 @@ document.getElementById('undoBtn').addEventListener('click', async ()=>{
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   if(entries.length===0){ showToast('Aktarılacak kayıt yok'); return; }
   const sorted = [...entries].sort((a,b)=>a.ts-b.ts);
-  const rows = [['ad_soyad','ilk_olcum_saati','tarih','saat','unix_ts_ms','bina_alan','oda','not']];
+  const rows = [['ad_soyad','ilk_olcum_saati','tarih','saat','unix_ts_ms','bina_alan','oda','durum','not']];
   sorted.forEach(e=>{
     const d = new Date(e.ts);
-    rows.push([e.participant||participantName||'bilinmiyor', e.firstTime||firstMeasurementTime||'', fmtDate(d), fmtTime(d), e.ts, e.label, e.room||'', e.note||'']);
+    rows.push([e.participant||participantName||'bilinmiyor', e.firstTime||firstMeasurementTime||'', fmtDate(d), fmtTime(d), e.ts, e.label, e.room||'', e.status||'', e.note||'']);
   });
   const csv = rows.map(r=> r.map(c=> `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
@@ -878,6 +1060,48 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   showToast('CSV indirildi');
 });
+
+/* ---------- Toplu Taşıma / Diğer kutusu ---------- */
+const TRANSIT_OPTIONS = [
+  { key:'Marmaray',  icon:'🚆', color:'#b83280' },
+  { key:'Özel Araç', icon:'🚗', color:'#5a6472' },
+  { key:'Otobüs',    icon:'🚌', color:'#d98a2b' }
+];
+
+function showChoiceModal(title, options, onPick){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-box">
+        <h3>${escapeHtml(title)}</h3>
+        <div class="choice-list">
+          ${options.map((o,i)=>`<button class="choice-btn" data-i="${i}" style="background:${o.color}"><span>${o.icon}</span>${escapeHtml(o.key)}</button>`).join('')}
+        </div>
+        <div class="modal-actions"><button class="cancel" id="modalCancel">İptal</button></div>
+      </div>
+    </div>`;
+  function close(){ root.innerHTML = ''; }
+  document.getElementById('modalCancel').addEventListener('click', close);
+  document.getElementById('modalOverlay').addEventListener('click', (ev)=>{ if(ev.target.id === 'modalOverlay') close(); });
+  root.querySelectorAll('[data-i]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ const o = options[+btn.getAttribute('data-i')]; close(); onPick(o); });
+  });
+}
+
+function openTransit(){
+  showChoiceModal('Toplu Taşıma', TRANSIT_OPTIONS, (o)=> logEntry(o.key, null, o.color));
+}
+
+function openOther(){
+  showInputModal('Kampüs dışında mısın? Not yazın', '', (val)=>{
+    const txt = (val || '').trim();
+    if(!txt){ showToast('Not boş bırakılamaz'); return; }
+    logEntry('Diğer', null, '#5a6472', null, txt);
+  });
+}
+
+document.getElementById('transitBtn').addEventListener('click', openTransit);
+document.getElementById('otherBtn').addEventListener('click', openOther);
 
 renderCurrent();
 loadData();

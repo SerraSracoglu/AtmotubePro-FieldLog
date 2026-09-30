@@ -207,9 +207,12 @@
    ====================================================================== */
 
 /* ======================================================================
-   SUNUCU ADRESİ — tunnel her yeniden başlatıldığında güncelleyin
+   KAYITLARIN GİDECEĞİ ADRES — Google Apps Script "Web uygulaması" adresi.
+   Dağıtımdan aldığınız https://script.google.com/macros/s/.../exec
+   adresini tırnakların arasına yapıştırın. Boş bırakılırsa kayıtlar
+   sadece telefonda tutulur.
    ====================================================================== */
-const SERVER_URL = 'https://post-covers-geek-tour.trycloudflare.com';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyMulHq-VdbIo4X5x5DR75kBbwxfsnj1OSvXV1oMM22oqj_DlGHSElPHQfQmBooGJxX3g/exec';
 
 /* ======================================================================
    BÖLGE SINIRLARI
@@ -374,6 +377,7 @@ const ZONE_TREE = {
 /* ====================================================================== */
 const STORE_KEY = 'saha-gunlugu:kayitlar';
 const PROFILE_KEY = 'saha-gunlugu:profil';
+const OUTBOX_KEY = 'saha-gunlugu:gonderilecek';
 const RECENT_MAX = 6;
 const NAMED_GRAY = '#5a6472', UNNAMED_GRAY = '#8a8f98';
 
@@ -382,6 +386,9 @@ let participantName = '';
 let firstMeasurementTime = '';
 let recentEntries = [];
 let navPath = [];
+let outbox = [];   // henüz tabloya ulaşmamış işlemler
+let syncing = false;
+let lastSyncError = '';
 
 function pad(n){ return n.toString().padStart(2,'0'); }
 function fmtTime(d){ return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }
@@ -676,29 +683,75 @@ function renderRoomArea(){
 /* ---------- Kayıt işlemleri ---------- */
 async function logEntry(label, room, color){
   const now = new Date();
-  entries.push({ id: now.getTime().toString(36)+Math.random().toString(36).slice(2,6), label, room: room||'', note:'', color: color||NAMED_GRAY, ts: now.getTime() });
+  const entry = { id: now.getTime().toString(36)+Math.random().toString(36).slice(2,6), label, room: room||'', note:'',
+                  color: color||NAMED_GRAY, ts: now.getTime(), participant: participantName, firstTime: firstMeasurementTime };
+  entries.push(entry);
   const key = label+'|'+(room||'');
   recentEntries = [{label, room:room||'', color:color||NAMED_GRAY, key}, ...recentEntries.filter(r=> r.key!==key)].slice(0, RECENT_MAX);
   await saveEntries(); await saveProfile();
   renderRecent(); renderLog();
   showToast(label + (room? ' — '+room:'') + ' — ' + fmtTime(now));
   if(navigator.vibrate) navigator.vibrate(15);
-  sendToServer({ label, room: room||'', note:'', ts: now.getTime() });
+  queueSync('upsert', entry);
 }
 
-function sendToServer(entry){
-  if(!SERVER_URL) return;
-  fetch(SERVER_URL.replace(/\/$/,'') + '/log', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      participant_name: participantName,
-      first_measurement_time: firstMeasurementTime,
-      ts: entry.ts, num: null, label: entry.label, room: entry.room, note: entry.note || ''
-    })
-  }).then(res=>{ if(!res.ok) throw new Error('sunucu hatası'); })
-    .catch(()=>{ showToast('⚠️ Sunucuya ulaşılamadı, kayıt telefonda saklı'); });
+/* ---------- Google E-Tablo'ya gönderim (kuyruklu) ---------- */
+function toPayload(action, e){
+  const d = new Date(e.ts);
+  return {
+    action, id: e.id,
+    participant_name: e.participant || participantName || '',
+    first_measurement_time: e.firstTime || firstMeasurementTime || '',
+    date: fmtDate(d), time: fmtTime(d), ts: e.ts,
+    label: e.label, room: e.room || '', note: e.note || ''
+  };
 }
+
+function queueSync(action, entry){
+  if(!SHEET_URL) return;
+  // Aynı kayda ait bekleyen eski işlem varsa, yenisi onun yerine geçer
+  outbox = outbox.filter(o=> o.id !== entry.id);
+  outbox.push(toPayload(action, entry));
+  saveOutbox(); renderLog();
+  flushOutbox();
+}
+
+async function flushOutbox(){
+  if(!SHEET_URL || syncing || outbox.length === 0) return;
+  if(navigator.onLine === false) return;
+  syncing = true;
+  try{
+    while(outbox.length){
+      const item = outbox[0];
+      // text/plain gönderiyoruz: Google Apps Script ile CORS sorunu çıkmasın diye
+      let res;
+      try{
+        res = await fetch(SHEET_URL, { method:'POST', body: JSON.stringify(item) });
+      }catch(netErr){
+        throw new Error('Adrese ulaşılamadı. İnternet yok ya da dağıtımda "Erişimi olanlar: Herkes" seçili değil.');
+      }
+      if(!res.ok) throw new Error('Google HTTP ' + res.status + ' döndürdü. Adresin /exec ile bittiğini kontrol edin.');
+      const text = await res.text();
+      let out;
+      try{ out = JSON.parse(text); }
+      catch(e){ throw new Error('Google beklenmeyen bir sayfa döndürdü (muhtemelen giriş sayfası). Dağıtımda "Erişimi olanlar: Herkes" olmalı.'); }
+      if(out.ok === false) throw new Error('Apps Script hatası: ' + (out.error || 'bilinmiyor'));
+      outbox.shift();
+      saveOutbox();
+    }
+    lastSyncError = '';
+  }catch(err){
+    lastSyncError = err.message || String(err);
+    console.warn('Gönderim bekletildi:', err);
+  }finally{
+    syncing = false;
+    renderLog();
+  }
+}
+
+function showSyncError(){ showToast('Hata: ' + lastSyncError); }
+
+function saveOutbox(){ try{ localStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox)); }catch(e){} }
 
 function renderRecent(){
   const row = document.getElementById('recentRow');
@@ -718,6 +771,7 @@ function renderRecent(){
 /* ---------- Depolama ---------- */
 async function loadData(){
   try{ entries = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }catch(e){ entries=[]; }
+  try{ outbox = JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]'); }catch(e){ outbox=[]; }
   try{
     const prof = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
     participantName = prof.participantName || '';
@@ -728,6 +782,7 @@ async function loadData(){
   document.getElementById('firstTime').value = firstMeasurementTime;
   updateIdStatus();
   renderRecent(); renderLog();
+  flushOutbox();
 }
 async function saveEntries(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(entries)); }catch(e){ showToast('Kaydetme hatası'); } }
 async function saveProfile(){ try{ localStorage.setItem(PROFILE_KEY, JSON.stringify({participantName, firstMeasurementTime, recentEntries})); }catch(e){} }
@@ -739,7 +794,26 @@ function updateIdStatus(){
 /* ---------- Kayıt günlüğü ---------- */
 function renderLog(){
   const log = document.getElementById('log'); const count = document.getElementById('count');
-  count.textContent = entries.length + ' kayıt';
+  let status = '';
+  if(!SHEET_URL) status = ' · ⚠️ SHEET_URL boş, tabloya gönderilmiyor';
+  else if(outbox.length) status = ' · ⏳ ' + outbox.length + ' bekliyor (dokun: tekrar dene)';
+  else status = ' · ✓ gönderildi';
+  count.textContent = entries.length + ' kayıt' + status;
+  count.style.cursor = SHEET_URL ? 'pointer' : '';
+  count.onclick = ()=>{ if(lastSyncError) showSyncError(); flushOutbox(); };
+  let errBox = document.getElementById('syncError');
+  if(!errBox){
+    errBox = document.createElement('div');
+    errBox.id = 'syncError';
+    errBox.style.cssText = 'display:none;margin:0 0 8px;padding:9px 11px;border-radius:10px;background:#fdecea;color:#8a1f11;font-size:12px;line-height:1.35;';
+    log.parentNode.insertBefore(errBox, log);
+  }
+  if(SHEET_URL && outbox.length && lastSyncError){
+    errBox.textContent = '⚠️ Tabloya gönderilemedi: ' + lastSyncError;
+    errBox.style.display = 'block';
+  } else {
+    errBox.style.display = 'none';
+  }
   if(entries.length === 0){ log.innerHTML = '<div class="empty">Henüz kayıt yok.</div>'; return; }
   const sorted = [...entries].sort((a,b)=> b.ts-a.ts);
   log.innerHTML = sorted.map(e=>{
@@ -756,8 +830,10 @@ function renderLog(){
   }).join('');
   log.querySelectorAll('.log-del').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
+      const del = entries.find(e=> e.id===btn.getAttribute('data-id'));
       entries = entries.filter(e=> e.id!==btn.getAttribute('data-id'));
       await saveEntries(); renderLog(); showToast('Kayıt silindi');
+      if(del) queueSync('delete', del);
     });
   });
   log.querySelectorAll('.log-note-btn').forEach(btn=>{
@@ -767,6 +843,7 @@ function renderLog(){
       showInputModal('Not', e.note || '', async (val)=>{
         e.note = val.trim();
         await saveEntries(); renderLog();
+        queueSync('upsert', e);
         showToast(e.note ? 'Not kaydedildi' : 'Not silindi');
       });
     });
@@ -781,8 +858,9 @@ document.getElementById('firstTime').addEventListener('input', async (ev)=>{
 });
 document.getElementById('undoBtn').addEventListener('click', async ()=>{
   if(entries.length===0){ showToast('Silinecek kayıt yok'); return; }
-  entries.sort((a,b)=>a.ts-b.ts); entries.pop();
+  entries.sort((a,b)=>a.ts-b.ts); const last = entries.pop();
   await saveEntries(); renderLog(); showToast('Son kayıt silindi');
+  if(last) queueSync('delete', last);
 });
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   if(entries.length===0){ showToast('Aktarılacak kayıt yok'); return; }
@@ -790,7 +868,7 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   const rows = [['ad_soyad','ilk_olcum_saati','tarih','saat','unix_ts_ms','bina_alan','oda','not']];
   sorted.forEach(e=>{
     const d = new Date(e.ts);
-    rows.push([participantName||'bilinmiyor', firstMeasurementTime||'', fmtDate(d), fmtTime(d), e.ts, e.label, e.room||'', e.note||'']);
+    rows.push([e.participant||participantName||'bilinmiyor', e.firstTime||firstMeasurementTime||'', fmtDate(d), fmtTime(d), e.ts, e.label, e.room||'', e.note||'']);
   });
   const csv = rows.map(r=> r.map(c=> `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
@@ -803,6 +881,8 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
 
 renderCurrent();
 loadData();
+window.addEventListener('online', flushOutbox);
+setInterval(flushOutbox, 30000);
 </script>
 </body>
 </html>

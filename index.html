@@ -105,6 +105,20 @@
   .log-del{ background:none;border:none;color:var(--muted); font-family:'JetBrains Mono', monospace; font-size:14px; cursor:pointer; padding:4px 6px; }
   .log-del:hover{color:#c0392b;}
   .empty{ padding:26px 14px; text-align:center; color:var(--muted); font-size:13px; }
+  .day-head{
+    display:flex; justify-content:space-between; align-items:center; padding:7px 12px;
+    background:var(--bg); border-bottom:1px solid var(--line);
+    font-size:11.5px; font-weight:700; color:var(--muted);
+  }
+  .day-head + .empty{ padding:16px 14px; }
+  .past-toggle{
+    width:100%; display:flex; justify-content:space-between; align-items:center; gap:8px;
+    padding:11px 12px; background:var(--panel); border:none; border-top:1px solid var(--line); cursor:pointer;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12.5px; color:var(--ink); text-align:left;
+  }
+  .past-toggle span{ color:var(--muted); font-weight:500; }
+  .past-box{ border-top:1px solid var(--line); }
+  .past-box .log-row{ opacity:.8; }
   .actions{ display:flex; gap:8px; margin-top:14px; }
   .actions button{
     flex:1; border:1px solid var(--line); background:var(--panel); color:var(--ink);
@@ -117,7 +131,7 @@
     background:var(--ink); color:#fff; padding:9px 16px; border-radius:20px;
     font-size:12.5px; font-family:'Space Grotesk', sans-serif;
     opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
-    max-width:88%; text-align:center; z-index:1200;
+    max-width:88%; text-align:center; z-index:1200; white-space:pre-line;
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
   .box-grid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:10px; }
@@ -127,6 +141,27 @@
     font-size:14px; cursor:pointer; min-height:56px; -webkit-user-select:none; user-select:none;
   }
   .nav-btn:active{transform:scale(0.96);}
+
+  /* ---------- İlk ölçüm saati: günlük pencere + uyarı ---------- */
+  .id-row.warn{ background:#fff4e5; border-color:#f0a54a; animation:warnPulse 1.1s ease-in-out 4; }
+  @keyframes warnPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(240,165,74,0); } 50%{ box-shadow:0 0 0 5px rgba(240,165,74,.45); } }
+  .id-warn{ display:none; font-size:12px; font-weight:600; color:#c46a00; margin:-8px 4px 14px; }
+  .id-warn.show{ display:block; }
+  .daily-now{
+    width:100%; border:none; border-radius:12px; padding:16px; cursor:pointer;
+    background:#1f9e8b; color:#fff; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px;
+  }
+  .daily-now:active{ transform:scale(0.97); }
+  .daily-or{ text-align:center; font-size:12px; color:var(--muted); margin:12px 0 8px; }
+  .daily-row{ display:flex; gap:8px; }
+  .daily-row input{
+    flex:1; min-width:0; border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-family:'JetBrains Mono', monospace; font-size:15px; color:var(--ink); background:#fff;
+  }
+  .daily-row button{
+    border:none; border-radius:10px; padding:0 16px; background:var(--ink); color:#fff; cursor:pointer;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+  }
 
   /* ---------- Son kayıt çubuğu ---------- */
   .last-bar{
@@ -194,7 +229,8 @@
     <h1>Saha Günlüğü</h1>
     <div class="clock" id="clock">--:--:-- · --.--.----</div>
   </header>
-  <p class="sub">GTÜ Kampüsü — bölge seçin, sonra bina/yol/alanlara dokunun.</p>
+  <p class="sub">GTÜ Kampüsü - Bulunduğunuz kampüs bölgesini seçin, sonra bulunduğunuz bina/yol/ortak alana dokunun.</p>
+  <p class="sub"> Bu sayede bulunduğunuz ortamı saha günlüğünüze kaydetmiş olacaksınız.</p>
 
   <div class="last-bar" id="lastBar" style="display:none">
     <div class="last-info">
@@ -210,11 +246,12 @@
     <span class="id-status" id="nameStatus"></span>
   </div>
 
-  <div class="id-row">
+  <div class="id-row" id="firstTimeRow">
     <label for="firstTime">İlk Ölçüm Saati</label>
     <input id="firstTime" type="time" step="1">
     <span class="id-status" id="firstTimeStatus"></span>
   </div>
+  <div class="id-warn" id="firstTimeWarn">⚠️ Bugünün ilk ölçüm saati girilmedi</div>
 
   <div class="section-label">Son Kullanılanlar</div>
   <div class="recent-row" id="recentRow"><span class="recent-empty">Henüz kayıt yok</span></div>
@@ -452,6 +489,8 @@ const NAMED_GRAY = '#5a6472', UNNAMED_GRAY = '#8a8f98';
 let entries = [];
 let participantName = '';
 let firstMeasurementTime = '';
+let firstTimeDate = '';    // ilk ölçüm saatinin girildiği gün (YYYY-AA-GG)
+let dailyPromptDate = '';  // günlük pencerenin en son gösterildiği gün
 let recentEntries = [];
 let navPath = [];
 let outbox = [];   // henüz tabloya ulaşmamış işlemler
@@ -469,11 +508,11 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-function showToast(msg){
+function showToast(msg, ms){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   clearTimeout(showToast._h);
-  showToast._h = setTimeout(()=>t.classList.remove('show'), 1600);
+  showToast._h = setTimeout(()=>t.classList.remove('show'), ms || 1600);
 }
 
 /* ---------- Metin girişi pop-up'ı ---------- */
@@ -525,11 +564,11 @@ function showStatusModal(placeText, onPick){
         <h3>Durum seçin</h3>
         <div class="status-sub">${escapeHtml(placeText)}</div>
         <div class="status-group">
-          <div class="status-group-title">Hareket</div>
+          <div class="status-group-title">Şu an giriyor / çıkıyor</div>
           <div class="status-grid">${statusButtons('move')}</div>
         </div>
         <div class="status-group">
-          <div class="status-group-title">Mevcut Durum</div>
+          <div class="status-group-title">Bir süredir orada</div>
           <div class="status-grid">${statusButtons('state')}</div>
         </div>
         <div class="modal-actions"><button class="cancel" id="modalCancel">İptal</button></div>
@@ -817,7 +856,13 @@ async function commitEntry(label, room, color, status, note){
   recentEntries = [{label, room:room||'', color:color||NAMED_GRAY, key}, ...recentEntries.filter(r=> r.key!==key)].slice(0, RECENT_MAX);
   await saveEntries(); await saveProfile();
   renderRecent(); renderLog();
-  showToast(label + (room? ' — '+room:'') + ' · ' + status + ' — ' + fmtTime(now));
+  const msg = label + (room? ' — '+room:'') + ' · ' + status + ' — ' + fmtTime(now);
+  if(!firstMeasurementTime){
+    setFirstTimeWarn(true);
+    showToast(msg + '\n⚠️ Bugünün ilk ölçüm saati girilmedi', 3000);
+  } else {
+    showToast(msg);
+  }
   if(navigator.vibrate) navigator.vibrate(15);
   queueSync('upsert', entry);
 }
@@ -825,9 +870,19 @@ async function commitEntry(label, room, color, status, note){
 /* ---------- Son kayıt çubuğu + Hâlâ buradayım ---------- */
 const STALE_MINUTES = 30; // bu kadar dakika kayıt girilmezse çubuk turuncuya döner
 
+function dayKey(ts){ return fmtDate(new Date(ts)); }
+function todayEntries(){ const t = fmtDate(new Date()); return entries.filter(e=> dayKey(e.ts) === t); }
+function dayTitle(key){
+  const t = new Date(); const y = new Date(t); y.setDate(t.getDate() - 1);
+  if(key === fmtDate(t)) return 'Bugün';
+  if(key === fmtDate(y)) return 'Dün';
+  const [Y,M,D] = key.split('-'); return D + '.' + M + '.' + Y;
+}
+// Sadece BUGÜNÜN son kaydı (dünkü kayıt üst çubukta görünmesin)
 function lastEntry(){
-  if(!entries.length) return null;
-  return entries.reduce((a,b)=> (b.ts > a.ts ? b : a));
+  const list = todayEntries();
+  if(!list.length) return null;
+  return list.reduce((a,b)=> (b.ts > a.ts ? b : a));
 }
 
 function fmtAgo(ms){
@@ -878,7 +933,7 @@ function toPayload(action, e){
   return {
     action, id: e.id,
     participant_name: e.participant || participantName || '',
-    first_measurement_time: e.firstTime || firstMeasurementTime || '',
+    first_measurement_time: e.firstTime || '',
     date: fmtDate(d), time: fmtTime(d), ts: e.ts,
     label: e.label, room: e.room || '', note: e.note || '',
     status: e.status || ''
@@ -956,6 +1011,10 @@ async function loadData(){
     const prof = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
     participantName = prof.participantName || '';
     firstMeasurementTime = prof.firstMeasurementTime || '';
+    firstTimeDate = prof.firstTimeDate || '';
+    dailyPromptDate = prof.dailyPromptDate || '';
+    // Saat başka bir güne aitse (veya hangi güne ait olduğu bilinmiyorsa) bugüne taşıma
+    if(firstMeasurementTime && firstTimeDate !== fmtDate(new Date())) firstMeasurementTime = '';
     recentEntries = (prof.recentEntries || []).map(r=>({ ...r, key: r.label+'|'+(r.room||'') }));
   }catch(e){ participantName=''; firstMeasurementTime=''; recentEntries=[]; }
   document.getElementById('pname').value = participantName;
@@ -963,13 +1022,90 @@ async function loadData(){
   updateIdStatus();
   renderRecent(); renderLog();
   flushOutbox();
+  saveProfile();
+  dailyCheck();
 }
 async function saveEntries(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(entries)); }catch(e){ showToast('Kaydetme hatası'); } }
-async function saveProfile(){ try{ localStorage.setItem(PROFILE_KEY, JSON.stringify({participantName, firstMeasurementTime, recentEntries})); }catch(e){} }
+async function saveProfile(){ try{ localStorage.setItem(PROFILE_KEY, JSON.stringify({participantName, firstMeasurementTime, firstTimeDate, dailyPromptDate, recentEntries})); }catch(e){} }
 function updateIdStatus(){
   document.getElementById('nameStatus').textContent = participantName ? '✓' : '';
   document.getElementById('firstTimeStatus').textContent = firstMeasurementTime ? '✓' : '';
 }
+
+/* ---------- İlk ölçüm saati: günlük sıfırlama, pencere, uyarı ---------- */
+function setFirstTimeWarn(on){
+  document.getElementById('firstTimeRow').classList.toggle('warn', on);
+  document.getElementById('firstTimeWarn').classList.toggle('show', on);
+}
+
+async function setFirstTime(val){
+  firstMeasurementTime = val || '';
+  firstTimeDate = fmtDate(new Date());
+  document.getElementById('firstTime').value = firstMeasurementTime;
+  updateIdStatus();
+  if(firstMeasurementTime){
+    setFirstTimeWarn(false);
+    // Bugün saat girilmeden düşen kayıtlara da bu saati ekle
+    const today = fmtDate(new Date());
+    entries.filter(e=> !e.firstTime && fmtDate(new Date(e.ts)) === today).forEach(e=>{
+      e.firstTime = firstMeasurementTime;
+      queueSync('upsert', e);
+    });
+    await saveEntries();
+  }
+  await saveProfile();
+}
+
+function showDailyModal(){
+  const root = document.getElementById('modalRoot');
+  if(root.innerHTML) return; // başka bir pencere açıksa üstüne açma
+  const hello = participantName ? 'Günaydın ' + participantName.split(' ')[0] + '!' : 'Günaydın!';
+  root.innerHTML = `
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-box">
+        <h3>${escapeHtml(hello)} Bugünkü ilk ölçüm saatin?</h3>
+        <button class="daily-now" id="dailyNow">Şimdi başlıyorum</button>
+        <div class="daily-or">ya da saati kendin seç</div>
+        <div class="daily-row">
+          <input type="time" step="1" id="dailyTime">
+          <button id="dailySave">Kaydet</button>
+        </div>
+        <div class="modal-actions"><button class="cancel" id="modalCancel">Sonra</button></div>
+      </div>
+    </div>`;
+  function close(){ root.innerHTML = ''; }
+  document.getElementById('modalCancel').addEventListener('click', close);
+  document.getElementById('dailyNow').addEventListener('click', ()=>{
+    const t = fmtTime(new Date()); close(); setFirstTime(t); showToast('İlk ölçüm saati: ' + t);
+  });
+  document.getElementById('dailySave').addEventListener('click', ()=>{
+    const v = document.getElementById('dailyTime').value;
+    if(!v){ showToast('Önce bir saat seç'); return; }
+    close(); setFirstTime(v.length === 5 ? v + ':00' : v); showToast('İlk ölçüm saati: ' + v);
+  });
+}
+
+// Günün ilk açılışında (ve sayfa açıkken gün değişirse) bir kez sorar
+let lastSeenDay = fmtDate(new Date());
+function dailyCheck(){
+  const today = fmtDate(new Date());
+  if(today !== lastSeenDay){
+    lastSeenDay = today;
+    renderLog.showPast = false;
+    renderRecent(); renderLog();
+    if(firstTimeDate !== today && firstMeasurementTime){
+      firstMeasurementTime = '';
+      document.getElementById('firstTime').value = '';
+      updateIdStatus(); setFirstTimeWarn(false);
+    }
+  }
+  if(!firstMeasurementTime && dailyPromptDate !== today){
+    dailyPromptDate = today;
+    saveProfile();
+    showDailyModal();
+  }
+}
+setInterval(dailyCheck, 60000);
 
 /* ---------- Kayıt günlüğü ---------- */
 function renderLog(){
@@ -979,7 +1115,8 @@ function renderLog(){
   if(!SHEET_URL) status = ' · ⚠️ SHEET_URL boş, tabloya gönderilmiyor';
   else if(outbox.length) status = ' · ⏳ ' + outbox.length + ' bekliyor (dokun: tekrar dene)';
   else status = ' · ✓ gönderildi';
-  count.textContent = entries.length + ' kayıt' + status;
+  const todayN = todayEntries().length;
+  count.textContent = todayN + ' kayıt bugün' + (entries.length > todayN ? ' · ' + entries.length + ' toplam' : '') + status;
   count.style.cursor = SHEET_URL ? 'pointer' : '';
   count.onclick = ()=>{ if(lastSyncError) showSyncError(); flushOutbox(); };
   let errBox = document.getElementById('syncError');
@@ -996,8 +1133,8 @@ function renderLog(){
     errBox.style.display = 'none';
   }
   if(entries.length === 0){ log.innerHTML = '<div class="empty">Henüz kayıt yok.</div>'; return; }
-  const sorted = [...entries].sort((a,b)=> b.ts-a.ts);
-  log.innerHTML = sorted.map(e=>{
+
+  const rowHtml = (e)=>{
     const d = new Date(e.ts);
     const text = e.label + (e.room? ' — '+e.room : '');
     const noteHtml = e.note ? `<span class="log-note">📝 ${escapeHtml(e.note)}</span>` : '';
@@ -1009,7 +1146,29 @@ function renderLog(){
       <button class="log-note-btn" data-note-id="${e.id}" title="Not ekle/düzenle">📝</button>
       <button class="log-del" data-id="${e.id}" title="Sil">✕</button>
     </div>`;
-  }).join('');
+  };
+
+  // Günlere ayır (en yeni gün üstte)
+  const today = fmtDate(new Date());
+  const groups = {};
+  [...entries].sort((a,b)=> b.ts-a.ts).forEach(e=>{ (groups[dayKey(e.ts)] = groups[dayKey(e.ts)] || []).push(e); });
+  const todayList = groups[today] || [];
+  const pastDays = Object.keys(groups).filter(k=> k !== today).sort().reverse();
+  const pastCount = pastDays.reduce((n,k)=> n + groups[k].length, 0);
+
+  let html = `<div class="day-head"><span>Bugün</span><span>${todayList.length} kayıt</span></div>`;
+  html += todayList.length ? todayList.map(rowHtml).join('') : '<div class="empty">Bugün henüz kayıt yok.</div>';
+  if(pastDays.length){
+    html += `<button class="past-toggle" id="pastToggle">${renderLog.showPast ? '▾' : '▸'} Önceki günler <span>${pastDays.length} gün · ${pastCount} kayıt</span></button>`;
+    if(renderLog.showPast){
+      html += '<div class="past-box">' + pastDays.map(k=>
+        `<div class="day-head"><span>${escapeHtml(dayTitle(k))}</span><span>${groups[k].length} kayıt</span></div>` + groups[k].map(rowHtml).join('')
+      ).join('') + '</div>';
+    }
+  }
+  log.innerHTML = html;
+  const pt = document.getElementById('pastToggle');
+  if(pt) pt.addEventListener('click', ()=>{ renderLog.showPast = !renderLog.showPast; renderLog(); });
   log.querySelectorAll('.log-del').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const del = entries.find(e=> e.id===btn.getAttribute('data-id'));
@@ -1035,12 +1194,11 @@ function renderLog(){
 document.getElementById('pname').addEventListener('input', async (ev)=>{
   participantName = ev.target.value.trim(); updateIdStatus(); await saveProfile();
 });
-document.getElementById('firstTime').addEventListener('input', async (ev)=>{
-  firstMeasurementTime = ev.target.value; updateIdStatus(); await saveProfile();
-});
+document.getElementById('firstTime').addEventListener('input', (ev)=>{ setFirstTime(ev.target.value); });
 document.getElementById('undoBtn').addEventListener('click', async ()=>{
-  if(entries.length===0){ showToast('Silinecek kayıt yok'); return; }
-  entries.sort((a,b)=>a.ts-b.ts); const last = entries.pop();
+  const last = lastEntry(); // sadece bugünün son kaydı
+  if(!last){ showToast('Bugün silinecek kayıt yok'); return; }
+  entries = entries.filter(e=> e.id !== last.id);
   await saveEntries(); renderLog(); showToast('Son kayıt silindi');
   if(last) queueSync('delete', last);
 });
@@ -1050,7 +1208,7 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   const rows = [['ad_soyad','ilk_olcum_saati','tarih','saat','unix_ts_ms','bina_alan','oda','durum','not']];
   sorted.forEach(e=>{
     const d = new Date(e.ts);
-    rows.push([e.participant||participantName||'bilinmiyor', e.firstTime||firstMeasurementTime||'', fmtDate(d), fmtTime(d), e.ts, e.label, e.room||'', e.status||'', e.note||'']);
+    rows.push([e.participant||participantName||'bilinmiyor', e.firstTime||'', fmtDate(d), fmtTime(d), e.ts, e.label, e.room||'', e.status||'', e.note||'']);
   });
   const csv = rows.map(r=> r.map(c=> `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
@@ -1093,7 +1251,7 @@ function openTransit(){
 }
 
 function openOther(){
-  showInputModal('Kampüs dışında mısın? Not yazın', '', (val)=>{
+  showInputModal('Öğrenci nerede? Not yazın', '', (val)=>{
     const txt = (val || '').trim();
     if(!txt){ showToast('Not boş bırakılamaz'); return; }
     logEntry('Diğer', null, '#5a6472', null, txt);
